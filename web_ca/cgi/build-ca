@@ -1,0 +1,25 @@
+#!/bin/bash
+
+echo "Content-Type: text/plain"
+echo ""
+
+LOG="/tmp/ca-build.log"
+
+
+# altes Log weg
+rm -f "$LOG"
+
+
+echo "
+====================================
+CA BUILD STARTED
+====================================
+" > "$LOG"
+
+
+/scripts/build_ca.sh \
+    >> "$LOG" \
+    2>&1 &
+
+
+echo "STARTED"

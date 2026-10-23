@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenVPN CA Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark">◆</span><div><h1>OpenVPN CA Manager</h1><small>OpenWrt Style</small></div></div>
+  <div class="header-status">
+    <span class="badge ok"><i class="status-dot"></i> nginx online</span>
+    <span id="ca-status" class="badge warn"><i class="status-dot"></i> CA lade...</span>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Dark Mode umschalten" title="Dark Mode umschalten"><span id="theme-icon">☾</span><span class="toggle-track"><span class="toggle-knob"></span></span></button>
+  </div>
+</header>
+<nav class="tabs" aria-label="Hauptnavigation"><div class="nav-brand">OPENVPN</div>
+  <button class="tab active" data-page="dashboard-page" onclick="showPage('dashboard-page', this)">Dashboard</button>
+  <button class="tab" data-page="server-page" onclick="showPage('server-page', this)">Server</button>
+  <button class="tab" data-page="clients-page" onclick="showPage('clients-page', this)">Clients</button>
+  <button class="tab" data-page="ca-page" onclick="showPage('ca-page', this)">CA</button>
+</nav>
+<main>
+  <section id="dashboard-page" class="page active">
+    <div class="summary-grid">
+      <div class="card summary-card"><h2>Clients</h2><div id="dashboard-client-count" class="big">0</div><p>VPN Profile vorhanden</p></div>
+      <div class="card summary-card"><h2>Certificate Authority</h2><div id="dashboard-ca-status" class="status warn">Wird geprüft…</div><p>Aktueller CA-Status</p></div>
+      <div class="card summary-card"><h2>VPN Server</h2><div id="dashboard-server-host" class="summary-value">-</div><p id="dashboard-server-detail">Port: - · Crypto: -</p><button onclick="showPage('server-page')">Serverdetails öffnen</button></div>
+    </div>
+    <div class="card">
+      <div class="card-heading"><h2>Client-Übersicht</h2><button id="refresh-clients-btn" onclick="pullClientList()">Client-Liste aktualisieren</button></div>
+      <p id="client-list-summary" class="muted">Client-Liste noch nicht geprüft. Klicke auf „Client-Liste aktualisieren“.</p><div id="dashboard-client-list" class="client-list" role="list"><p class="muted">Client-Liste wird geladen…</p></div>
+    </div>
+  </section>
+
+  <section id="server-page" class="page" hidden>
+    <div class="card"><h2>Server</h2><table>
+      <tr><td>Host</td><td id="server-host">-</td></tr>
+      <tr><td>Port</td><td id="server-port">-</td></tr>
+      <tr><td>Crypto</td><td id="server-crypto">-</td></tr>
+    </table><button onclick="exportServer()">Server exportieren</button>
+    </div>
+  </section>
+
+  <section id="clients-page" class="page" hidden>
+    <div class="card"><h2>Clients verwalten</h2>
+      <div class="client-toolbar"><div><div id="client-count" class="big">0</div><p>VPN Profile vorhanden</p></div>
+      <div class="client-actions"><input id="client-name" placeholder="Client Name" aria-label="Client Name">
+        <button onclick="newClient()">Client erstellen</button><button onclick="downloadClient('tcp')">TCP OVPN</button><button onclick="downloadClient('udp')">UDP OVPN</button><button onclick="downloadClient('connect')">Connect OVPN</button><button onclick="clientInfo()">Check Client</button>
+        <button class="danger" onclick="revokeClient()">Revoke Client</button><button class="danger" onclick="recreateClient()">Force Recreate</button>
+      </div></div>
+      <h3>Client-Liste</h3><button onclick="pullClientList()">Client-Liste aktualisieren</button><div id="clients-page-list" class="client-list" role="list"><p class="muted">Client-Liste wird geladen…</p></div>
+    </div>
+  </section>
+
+  <section id="ca-page" class="page" hidden>
+    <div class="card"><h2>Certificate Authority</h2><p>Certificate Authority Status: <strong id="ca-page-status">Wird geprüft…</strong></p>
+      <button onclick="showCASetup()">CA erstellen</button>
+      <div id="setup" class="cbi-subsection" style="display:none"><h3>Neue CA</h3>
+        <div class="formgrid">
+          <input id="cn" placeholder="CA Name" value="HomeVPN-CA">
+          <input id="org" placeholder="Organisation" value="HomeVPN">
+          <input id="ou" placeholder="OU" value="VPN">
+          <input id="email" placeholder="Email" value="admin@local">
+          <input id="country" placeholder="Land" value="DE">
+          <input id="province" placeholder="Bundesland" value="BW">
+          <input id="city" placeholder="Stadt" value="Home">
+          <input id="host" placeholder="VPN Host">
+          <input id="port" placeholder="Port" value="1194">
+          <select id="algo"><option value="ec">EC</option><option value="rsa">RSA</option></select>
+          <select id="digest"><option value="sha512">SHA512</option><option value="sha256">SHA256</option></select>
+          <input id="dh" placeholder="DH" value="2048">
+        </div><button onclick="createCA()">Erstellen</button>
+      </div>
+    </div>
+
+    <div class="card"><h2>CA-Aktionen</h2><button onclick="backupCA()">Backup CA</button></div>
+    <div class="card danger-zone"><h2>Danger Zone</h2><p>Komplette Certificate Authority entfernen.</p>
+      <label class="confirm"><input type="checkbox" id="destroy-confirm"> Ich weiß was ich tue</label><br>
+      <button class="danger" onclick="destroyCA()">CA zerstören</button>
+    </div>
+  </section>
+
+  <!-- Gemeinsames Aktivitätslog: am unteren Rand jeder Registerkarte sichtbar -->
+  <div class="card activity-log-card"><h2>Aktivitätslog</h2><pre id="logbox">bereit</pre></div>
+</main>
+<footer>OpenVPN CA Manager <span>•</span> Alpine <span>•</span> nginx <span>•</span> EasyRSA <span>•</span> OpenVPN <span class="version">v1.0.0</span></footer>
+<script src="app.js"></script>
+</body>
+</html>

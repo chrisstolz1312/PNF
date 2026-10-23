@@ -1,0 +1,57 @@
+services:
+  openwrt_gw4_udp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: openwrt_gw4_udp
+    container_name: openwrt_gw4_udp
+
+    restart: unless-stopped
+
+    privileged: true
+  
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+    devices:
+      - /dev/net/tun:/dev/net/tun
+
+    ports:
+      - "8008:80/tcp"
+      - "1198:1194/udp"
+
+
+    volumes:
+      - ../../web_ca/server_export:/etc/openvpn:ro
+
+    environment:
+      IPVS_PORT: "1194"
+      IPVS_IPV4: "172.31.255.24"
+      IPVS_IPV6: "fdff:ffff:dc59:1312::24"
+      IPVS_PROT: "udp"
+
+    networks:
+      openwrt_openvpn:
+        ipv4_address: 172.31.255.24
+        ipv6_address: fdff:ffff:dc59:1312::24
+
+networks:
+  openwrt_openvpn:
+    name: openwrt_openvpn
+    driver: bridge
+
+    driver_opts:
+      com.docker.network.bridge.name: br-openvpn
+
+    enable_ipv6: true
+
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.31.255.0/24
+          gateway: 172.31.255.1
+
+        - subnet: fdff:ffff:dc59:1312::/64
+          gateway: fdff:ffff:dc59:1312::1

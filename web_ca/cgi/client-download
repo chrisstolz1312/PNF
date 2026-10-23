@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+CLIENT=$(printf '%s' "${QUERY_STRING:-}" | sed -n 's/.*\(^\|&\)name=\([A-Za-z0-9_.-]*\)\(&.*\|$\).*/\2/p')
+MODE=$(printf '%s' "${QUERY_STRING:-}" | sed -n 's/.*\(^\|&\)mode=\([A-Za-z]*\)\(&.*\|$\).*/\2/p')
+[ -n "$MODE" ] || MODE=tcp
+case "$CLIENT" in ''|.|..) printf 'Status: 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nClientname fehlt oder ungültig'; exit 1 ;; esac
+case "$CLIENT" in *[!A-Za-z0-9_.-]*) printf 'Status: 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nUngültiger Clientname'; exit 1 ;; esac
+case "$MODE" in tcp|udp|connect) ;; *) printf 'Status: 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nUngültiger Profiltyp'; exit 1 ;; esac
+FILE="/ca/clients/$CLIENT/ovpn/${MODE}_${CLIENT}.ovpn"
+if [ ! -f "$FILE" ]; then
+  printf 'Status: 404 Not Found\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nProfil nicht gefunden: %s\n' "$MODE"
+  exit 1
+fi
+printf 'Content-Type: application/x-openvpn-profile\r\n'
+printf 'Content-Disposition: attachment; filename="%s_%s.ovpn"\r\n' "$MODE" "$CLIENT"
+printf 'Cache-Control: no-store\r\n\r\n'
+cat "$FILE"

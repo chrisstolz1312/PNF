@@ -1,0 +1,8 @@
+config jool 'general'
+        option enabled '1'
+
+config jool 'nat64'
+        option enabled '1'
+
+config jool 'siit'
+        option enabled '0'

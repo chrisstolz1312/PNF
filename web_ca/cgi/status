@@ -1,0 +1,27 @@
+#!/bin/bash
+[ -f /ca/config/ca.env ] && source /ca/config/ca.env
+echo "Content-Type: application/json"
+echo ""
+
+if [ -f /ca/pki/ca.crt ] && \
+   [ -f /ca/pki/private/ca.key ] && \
+   [ -f /ca/pki/issued/server.crt ]
+then
+    CA=true
+else
+    CA=false
+fi
+
+CLIENTS=$(find /ca/clients -type d -name ovpn 2>/dev/null | wc -l)
+CLIENTS=$(echo "$CLIENTS" | tr -d "[:space:]")
+
+
+cat <<EOF
+{
+ "ca": $CA,
+ "clients": $CLIENTS,
+ "host": "$SERVER_HOST",
+ "port": "$SERVER_PORT",
+ "crypto": "$CA_ALGO/$CA_DIGEST"
+}
+EOF

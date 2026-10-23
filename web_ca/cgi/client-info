@@ -1,0 +1,11 @@
+#!/bin/bash
+
+echo "Content-Type: text/plain"
+echo ""
+
+
+CLIENT=$(echo "$QUERY_STRING" \
+| sed -n 's/^name=\([a-zA-Z0-9_-]*\)$/\1/p')
+
+
+exec /scripts/client_info.sh "$CLIENT"

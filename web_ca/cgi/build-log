@@ -1,0 +1,15 @@
+#!/bin/bash
+
+echo "Content-Type: text/plain"
+echo ""
+
+
+LOG="/tmp/ca-build.log"
+
+
+if [ -f "$LOG" ]
+then
+    cat "$LOG"
+else
+    echo "No CA build running"
+fi

@@ -1,0 +1,11 @@
+services:
+  ipvs:
+    build: .
+    container_name: ipvs
+    network_mode: host
+    privileged: true
+    restart: unless-stopped
+    environment:
+      IGNORE_TCP: "${IGNORE_TCP:-0}"
+    volumes:
+      - ./backends.conf:/backends.conf:ro

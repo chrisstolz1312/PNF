@@ -1,0 +1,188 @@
+#!/bin/sh
+
+#
+# Cleanup OpenWrt defaults
+#
+
+# Network cleanup
+uci delete network.@device[0] 2>/dev/null
+uci delete network.lan 2>/dev/null
+uci delete network.wan 2>/dev/null
+uci delete network.wan6 2>/dev/null
+uci delete network.vpn 2>/dev/null
+uci delete network.globals.ula_prefix 2>/dev/null
+
+# DHCP cleanup
+uci delete dhcp.lan 2>/dev/null
+uci delete dhcp.wan 2>/dev/null
+uci delete dhcp.wan6 2>/dev/null
+
+# Firewall cleanup
+while uci -q delete firewall.@forwarding[0]; do :; done
+while uci -q delete firewall.@rule[0]; do :; done
+while uci -q delete firewall.@zone[0]; do :; done
+
+uci delete firewall.lan 2>/dev/null
+uci delete firewall.wan 2>/dev/null
+uci delete firewall.vpn_wan 2>/dev/null
+
+
+#
+# WAN (IPv4)
+#
+
+uci set network.wan='interface'
+uci set network.wan.device='eth0'
+uci set network.wan.proto='static'
+
+uci set network.wan.ipaddr='172.31.255.14'
+uci set network.wan.netmask='255.255.255.0'
+uci set network.wan.gateway='172.31.255.1'
+
+uci add_list network.wan.dns='172.31.255.254'
+uci add_list network.wan.dns='fdff:ffff:dc59:1312:ffff:ffff:ffff:ffff'
+
+
+#
+# WAN6 (IPv6)
+#
+
+uci set network.wan.ip6addr='fdff:ffff:dc59:1312::14/64'
+uci set network.wan.ip6gw='fdff:ffff:dc59:1312::1'
+
+# optional IPv6 DNS
+#uci add_list network.wan.dns='fdff:ffff:dc59:1312::1'
+
+
+#
+# VPN (OpenVPN)
+#
+
+uci set network.vpn4='interface'
+uci set network.vpn4.device='tun0'
+uci set network.vpn4.proto='none'
+
+uci set network.vpn4.auto='1'
+uci set network.vpn4.force_link='1'
+uci set network.vpn4.defaultroute='0'
+uci set network.vpn4.delegate='0'
+
+uci set network.vpn6='interface'
+uci set network.vpn6.device='tun1'
+uci set network.vpn6.proto='none'
+
+uci set network.vpn6.auto='1'
+uci set network.vpn6.force_link='1'
+uci set network.vpn6.defaultroute='0'
+uci set network.vpn6.delegate='0'
+#
+# DHCP
+#
+
+uci set dhcp.wan='dhcp'
+uci set dhcp.wan.interface='wan'
+uci set dhcp.wan.ignore='1'
+
+uci set dhcp.wan6='dhcp'
+uci set dhcp.wan6.interface='wan6'
+uci set dhcp.wan6.ignore='1'
+
+
+#
+# Firewall WAN Zone
+#
+
+uci set firewall.wan='zone'
+uci set firewall.wan.name='wan'
+
+uci add_list firewall.wan.network='wan'
+uci add_list firewall.wan.network='wan6'
+
+uci set firewall.wan.input='ACCEPT'
+uci set firewall.wan.output='ACCEPT'
+uci set firewall.wan.forward='REJECT'
+
+uci set firewall.wan.masq='1'
+uci set firewall.wan.masq6='1'
+uci set firewall.wan.mtu_fix='1'
+
+
+#
+# Firewall VPN Zone
+#
+
+uci set firewall.lan='zone'
+uci set firewall.lan.name='lan'
+
+uci add_list firewall.lan.network='vpn4'
+uci add_list firewall.lan.network='vpn6'
+
+
+uci set firewall.lan.input='ACCEPT'
+uci set firewall.lan.output='ACCEPT'
+uci set firewall.lan.forward='ACCEPT'
+
+
+#
+# Forward VPN -> WAN
+#
+
+uci set firewall.vpn_wan='forwarding'
+uci set firewall.vpn_wan.src='lan'
+uci set firewall.vpn_wan.dest='wan'
+
+
+#
+# Force DNS to upstream resolvers
+#
+
+# IPv4 DNS -> 172.31.255.254:53
+uci set firewall.dns4_udp='redirect'
+uci set firewall.dns4_udp.name='Force DNS IPv4 UDP'
+uci set firewall.dns4_udp.src='lan'
+uci set firewall.dns4_udp.src_dport='53'
+uci set firewall.dns4_udp.proto='udp'
+uci set firewall.dns4_udp.target='DNAT'
+uci set firewall.dns4_udp.dest_ip='172.31.255.254'
+uci set firewall.dns4_udp.dest_port='53'
+
+uci set firewall.dns4_tcp='redirect'
+uci set firewall.dns4_tcp.name='Force DNS IPv4 TCP'
+uci set firewall.dns4_tcp.src='lan'
+uci set firewall.dns4_tcp.src_dport='53'
+uci set firewall.dns4_tcp.proto='tcp'
+uci set firewall.dns4_tcp.target='DNAT'
+uci set firewall.dns4_tcp.dest_ip='172.31.255.254'
+uci set firewall.dns4_tcp.dest_port='53'
+
+
+# IPv6 DNS -> fdff:ffff:dc59:1312:ffff:ffff:ffff:ffff:53
+uci set firewall.dns6_udp='redirect'
+uci set firewall.dns6_udp.name='Force DNS IPv6 UDP'
+uci set firewall.dns6_udp.src='lan'
+uci set firewall.dns6_udp.src_dport='53'
+uci set firewall.dns6_udp.proto='udp'
+uci set firewall.dns6_udp.family='ipv6'
+uci set firewall.dns6_udp.target='DNAT'
+uci set firewall.dns6_udp.dest_ip='fdff:ffff:dc59:1312:ffff:ffff:ffff:ffff'
+uci set firewall.dns6_udp.dest_port='53'
+
+uci set firewall.dns6_tcp='redirect'
+uci set firewall.dns6_tcp.name='Force DNS IPv6 TCP'
+uci set firewall.dns6_tcp.src='lan'
+uci set firewall.dns6_tcp.src_dport='53'
+uci set firewall.dns6_tcp.proto='tcp'
+uci set firewall.dns6_tcp.family='ipv6'
+uci set firewall.dns6_tcp.target='DNAT'
+uci set firewall.dns6_tcp.dest_ip='fdff:ffff:dc59:1312:ffff:ffff:ffff:ffff'
+uci set firewall.dns6_tcp.dest_port='53'
+
+#
+# Save
+#
+
+uci commit network
+uci commit dhcp
+uci commit firewall
+
+exit 0

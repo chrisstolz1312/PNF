@@ -1,0 +1,10 @@
+{
+        "comment": "NAT64 instance configuration.",
+        "instance": "nat64",
+        "framework": "netfilter",
+        "global": {
+                "pool6": "64:ff9b::/96",
+                "maximum-simultaneous-opens": 16,
+                "source-icmpv6-errors-better": true
+        }
+}

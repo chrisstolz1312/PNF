@@ -1,0 +1,25 @@
+services:
+  ca-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: web_ca_openvpn
+    container_name: ca-web
+
+    restart: unless-stopped
+
+    ports:
+      - "8080:80"
+
+    volumes:
+      - ./ca:/ca
+      - ./server_export:/server_export
+
+    networks:
+      admin_bridge:
+        ipv4_address: 192.168.255.2
+
+networks:
+  admin_bridge:
+    external: true

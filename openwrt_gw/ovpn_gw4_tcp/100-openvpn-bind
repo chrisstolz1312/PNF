@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -eu
+
+FILE="/usr/share/openvpn/openvpn.options"
+
+echo "Patching OpenVPN bind option..."
+
+# bind aus OPENVPN_BOOLS entfernen
+sed -i "/^OPENVPN_BOOLS='/,/^'/{
+    /^[[:space:]]*bind[[:space:]]*$/d
+}" "$FILE"
+
+# bind als Parameter vor bind_dev einfügen
+sed -i "/^OPENVPN_PARAMS='/,/^'/{
+    /^[[:space:]]*bind_dev[[:space:]]*$/i bind
+}" "$FILE"
+
+echo "OpenVPN bind option patched."
+
+exit 0

@@ -1,0 +1,40 @@
+#!/bin/bash
+
+echo "Content-Type: text/plain"
+echo ""
+
+mkdir -p /ca/config
+
+
+read POST_DATA
+
+
+get_value()
+{
+    echo "$POST_DATA" \
+    | tr '&' '\n' \
+    | grep "^$1=" \
+    | cut -d= -f2-
+}
+
+
+cat > /ca/config/ca.env <<EOF
+CA_COUNTRY="$(get_value country)"
+CA_PROVINCE="$(get_value province)"
+CA_CITY="$(get_value city)"
+
+CA_ORG="$(get_value org)"
+CA_EMAIL="$(get_value email)"
+CA_OU="$(get_value ou)"
+
+CA_CN="$(get_value cn)"
+
+CA_ALGO="$(get_value algo)"
+CA_DIGEST="$(get_value digest)"
+CA_DH_SIZE="$(get_value dh)"
+
+SERVER_HOST="$(get_value host)"
+SERVER_PORT="$(get_value port)"
+EOF
+
+echo "OK"

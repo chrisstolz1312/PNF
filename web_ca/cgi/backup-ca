@@ -1,0 +1,23 @@
+#!/bin/bash
+
+
+if [ ! -f /ca/pki/private/ca.key ]
+then
+
+echo "Content-Type: text/plain"
+echo ""
+
+echo "No CA available"
+
+exit 1
+
+fi
+
+
+
+echo "Content-Type: application/gzip"
+echo "Content-Disposition: attachment; filename=\"ca-backup.tar.gz\""
+echo ""
+
+
+exec /scripts/backup_ca.sh

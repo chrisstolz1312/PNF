@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+printf 'Content-Type: text/plain; charset=utf-8\r\n'
+printf 'Cache-Control: no-store\r\n\r\n'
+
+CLIENT=$(printf '%s' "${QUERY_STRING:-}" | sed -n 's/^name=\([A-Za-z0-9_.-]*\)$/\1/p')
+case "$CLIENT" in
+  ''|.|..) echo "ERROR: Ungültiger oder fehlender Clientname"; exit 1 ;;
+esac
+
+case "$CLIENT" in *[!A-Za-z0-9_.-]*) echo "ERROR: Ungültiger Clientname"; exit 1 ;; esac
+
+for mode in tcp udp connect; do
+  echo "--- Erzeuge Profil: $mode ---"
+  if ! /scripts/client.sh --name "$CLIENT" --mode "$mode"; then
+    echo "ERROR: Profil $mode konnte nicht erstellt werden"
+    exit 1
+  fi
+done
+
+echo "OK: $CLIENT mit TCP-, UDP- und Connect-Profilen erstellt."

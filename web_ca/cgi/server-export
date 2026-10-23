@@ -1,0 +1,9 @@
+#!/bin/bash
+
+
+echo "Content-Type: application/gzip"
+echo "Content-Disposition: attachment; filename=\"openvpn-server.tar.gz\""
+echo ""
+
+
+exec /scripts/server_export.sh
