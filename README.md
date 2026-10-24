@@ -1,4 +1,4 @@
-# :PNF — :Prototype Network Fabric
+# :P-NF — Prototype Network Fabric
 
 **Alpha release** · Modular OpenVPN infrastructure for **Ubuntu Server 26.04**.
 
