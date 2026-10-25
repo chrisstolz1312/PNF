@@ -76,7 +76,7 @@ The installer installs its required packages, including Docker, Docker Compose v
 3. Start the installer:
 
    ```bash
-   cd ~
+   cd ~/PNF
    sudo bash ./install.sh
    ```
 
