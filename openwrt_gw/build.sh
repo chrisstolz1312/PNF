@@ -56,7 +56,7 @@ echo "OK: Alle Zertifikate vorhanden."
 # Images vorbereiten
 ###############################################################################
 
-headline "Erstelle OpenWrt-Image-Links"
+headline "Verteile OpenWrt-Image auf alle Gateways"
 
 SRC="$ROOT/image/$ROOTFS"
 
@@ -69,50 +69,54 @@ fi
 
 echo "Zentrales OpenWrt-Image: OK"
 sha256sum "$SRC"
-
 echo
 
-# Alle acht Gateway-Image-Links erzeugen bzw. prüfen
+# Für jedes Gateway einen echten image/-Ordner anlegen und Rootfs kopieren.
 for gw in "${GATEWAYS[@]}"; do
+    DSTDIR="$ROOT/$gw/image"
+    DST="$DSTDIR/$ROOTFS"
 
-    DST="$ROOT/$gw/image"
+    if [[ ! -d "$ROOT/$gw" ]]; then
+        echo "FEHLER: Gateway-Verzeichnis fehlt: $ROOT/$gw"
+        exit 1
+    fi
 
+    # Alten Verzeichnis-Symlink entfernen (nicht sein Ziel!).
+    if [[ -L "$DSTDIR" ]]; then
+        rm -- "$DSTDIR"
+        echo "ALTER SYMLINK ENTFERNT: $gw/image"
+    elif [[ -e "$DSTDIR" && ! -d "$DSTDIR" ]]; then
+        echo "FEHLER: Image-Pfad ist kein Verzeichnis: $DSTDIR"
+        exit 1
+    fi
+
+    mkdir -p -- "$DSTDIR"
+
+    # Eine vorhandene Archiv-Symlink-Datei niemals überschreiben:
+    # sonst könnte das zentrale Image verändert werden.
     if [[ -L "$DST" ]]; then
-
-        # Existierenden Symlink prüfen
-        if [[ "$(readlink "$DST")" != "../image" ]]; then
-            echo "FEHLER: Falscher Image-Symlink:"
-            echo "$DST -> $(readlink "$DST")"
-            exit 1
-        fi
-
-    elif [[ -e "$DST" ]]; then
-
-        # Vorhandene reguläre Verzeichnisse nicht löschen
-        echo "FEHLER: Image-Pfad existiert bereits und ist kein Symlink:"
-        echo "$DST"
+        rm -- "$DST"
+    elif [[ -e "$DST" && ! -f "$DST" ]]; then
+        echo "FEHLER: Image-Ziel ist keine reguläre Datei: $DST"
         exit 1
+    fi
 
+    # Nur bei fehlender oder abweichender Datei neu kopieren.
+    if [[ ! -f "$DST" ]] || ! cmp -s -- "$SRC" "$DST"; then
+        cp -- "$SRC" "$DST"
+        echo "KOPIERT: $gw/image/$ROOTFS"
     else
-
-        # Neuen Symlink auf das zentrale Image-Verzeichnis erstellen
-        ln -s ../image "$DST"
-
+        echo "BEREITS AKTUELL: $gw/image/$ROOTFS"
     fi
 
-    # Prüfen, ob das Archiv über den Link erreichbar ist
-    if [[ ! -s "$DST/$ROOTFS" ]]; then
-        echo "FEHLER: OpenWrt-Image über Link nicht erreichbar:"
-        echo "$DST/$ROOTFS"
+    if [[ ! -s "$DST" || -L "$DST" ]] || ! cmp -s -- "$SRC" "$DST"; then
+        echo "FEHLER: OpenWrt-Image konnte nicht korrekt kopiert werden: $DST"
         exit 1
     fi
-
-    echo "OK: $gw/image -> ../image"
-
 done
 
 echo
-echo "Alle acht OpenWrt-Image-Links sind vorhanden."
+echo "Alle acht OpenWrt-Images liegen als reguläre Dateien vor."
 
 ###############################################################################
 # Images bauen
