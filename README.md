@@ -184,7 +184,3 @@ By default, the archive is written under `/tmp/pnf-backups/`. **Copy it off the 
 ## Contributing
 
 Issues, reproducible bug reports, and improvements are welcome. When reporting an installer problem, include the relevant log excerpt, Ubuntu version, kernel version, and affected module. **Redact credentials, private keys, and public IP information you do not wish to share.**
-
-## License
-
-No license is specified in this README. Add a `LICENSE` file to define the project's usage and contribution terms.
