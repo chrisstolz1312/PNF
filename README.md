@@ -1,4 +1,4 @@
-# PNF — Private Network Framework
+# :P-NF — Prototype Network Fabric
 
 **Alpha release** · Modular OpenVPN infrastructure for **Ubuntu Server 26.04**.
 
@@ -76,7 +76,7 @@ The installer installs its required packages, including Docker, Docker Compose v
 3. Start the installer:
 
    ```bash
-   cd ~
+   cd ~/PNF
    sudo bash ./install.sh
    ```
 
@@ -117,7 +117,7 @@ Depending on the Web CA scripts installed, a server export may also run automati
 Dozzle is a lightweight interface for observing Docker containers and viewing logs. If configured with Docker actions, it can also start, stop, or restart containers.
 
 ```bash
-cd ~/dozzle
+cd ~/PNF/dozzle
 bash ./build.sh   # If present
 # or: docker compose up -d
 ```
@@ -132,7 +132,7 @@ Stop it with `bash ./down.sh` (if present) or `docker compose down`.
 The `ddclient/` module provides optional dynamic DNS updates. Edit `ddclient/ddclient.conf` for your provider and hostname. Commented-out example credentials are **not active configuration**; a container can still emit warnings or restart until configured correctly.
 
 ```bash
-cd ~/ddclient
+cd ~/PNF/ddclient
 docker compose up -d
 ```
 
@@ -184,7 +184,3 @@ By default, the archive is written under `/tmp/pnf-backups/`. **Copy it off the 
 ## Contributing
 
 Issues, reproducible bug reports, and improvements are welcome. When reporting an installer problem, include the relevant log excerpt, Ubuntu version, kernel version, and affected module. **Redact credentials, private keys, and public IP information you do not wish to share.**
-
-## License
-
-No license is specified in this README. Add a `LICENSE` file to define the project's usage and contribution terms.
