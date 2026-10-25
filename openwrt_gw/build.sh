@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -Eeuo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 CERTDIR="$ROOT/../web_ca/server_export"
@@ -44,35 +44,75 @@ headline() {
 headline "Prüfe OpenVPN-Zertifikate"
 
 for f in "${REQUIRED[@]}"; do
-    [ -f "$CERTDIR/$f" ] || {
+    [[ -f "$CERTDIR/$f" ]] || {
         echo "ERROR: $CERTDIR/$f fehlt."
         exit 1
     }
 done
 
 echo "OK: Alle Zertifikate vorhanden."
+
 ###############################################################################
 # Images vorbereiten
 ###############################################################################
 
-headline "Bereite Images vor"
+headline "Erstelle OpenWrt-Image-Links"
 
+SRC="$ROOT/image/$ROOTFS"
+
+# Zentrales OpenWrt-Image prüfen
+if [[ ! -s "$SRC" ]]; then
+    echo "FEHLER: Zentrales OpenWrt-Image fehlt oder ist leer:"
+    echo "$SRC"
+    exit 1
+fi
+
+echo "Zentrales OpenWrt-Image: OK"
+sha256sum "$SRC"
+
+echo
+
+# Alle acht Gateway-Image-Links erzeugen bzw. prüfen
 for gw in "${GATEWAYS[@]}"; do
 
-    SRC="$ROOT/image/$ROOTFS"
-    DSTDIR="$ROOT/$gw/image"
-    DST="$DSTDIR/$ROOTFS"
+    DST="$ROOT/$gw/image"
 
-    [ -L "$DSTDIR" ] && rm "$DSTDIR"
+    if [[ -L "$DST" ]]; then
 
-    mkdir -p "$DSTDIR"
-    rm -f "$DST"
+        # Existierenden Symlink prüfen
+        if [[ "$(readlink "$DST")" != "../image" ]]; then
+            echo "FEHLER: Falscher Image-Symlink:"
+            echo "$DST -> $(readlink "$DST")"
+            exit 1
+        fi
 
-    if ! ln "$SRC" "$DST" 2>/dev/null; then
-        cp "$SRC" "$DST"
+    elif [[ -e "$DST" ]]; then
+
+        # Vorhandene reguläre Verzeichnisse nicht löschen
+        echo "FEHLER: Image-Pfad existiert bereits und ist kein Symlink:"
+        echo "$DST"
+        exit 1
+
+    else
+
+        # Neuen Symlink auf das zentrale Image-Verzeichnis erstellen
+        ln -s ../image "$DST"
+
     fi
 
+    # Prüfen, ob das Archiv über den Link erreichbar ist
+    if [[ ! -s "$DST/$ROOTFS" ]]; then
+        echo "FEHLER: OpenWrt-Image über Link nicht erreichbar:"
+        echo "$DST/$ROOTFS"
+        exit 1
+    fi
+
+    echo "OK: $gw/image -> ../image"
+
 done
+
+echo
+echo "Alle acht OpenWrt-Image-Links sind vorhanden."
 
 ###############################################################################
 # Images bauen
