@@ -24,6 +24,7 @@ services:
 
     volumes:
       - ../../web_ca/server_export:/etc/openvpn:ro
+      - ../../web_ca/crl:/etc/openvpn/crl:ro
 
     environment:
       IPVS_PORT: "1194"

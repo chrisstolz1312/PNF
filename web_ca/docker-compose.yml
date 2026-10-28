@@ -15,6 +15,7 @@ services:
     volumes:
       - ./ca:/ca
       - ./server_export:/server_export
+      - ./crl:/crl
 
     networks:
       admin_bridge:
