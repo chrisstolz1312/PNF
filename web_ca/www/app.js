@@ -363,37 +363,6 @@ async function revokeClient()
 
 
 
-
-
-
-async function recreateClient()
-{
-    let name =
-        $("client-name").value;
-
-
-    if(!name)
-        return alert("Client Name fehlt");
-
-
-
-    log(
-        await fetchText(
-            `/client-recreate?name=${encodeURIComponent(name)}`
-        )
-    );
-
-
-    await loadStatus();
-
-}
-
-
-
-
-
-
-
 async function destroyCA()
 {
 
