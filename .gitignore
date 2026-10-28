@@ -1,2 +1,3 @@
 # Generierte Gateway-Image-Links
 /openwrt_gw/ovpn_gw*/image
+/web_ca/crl/*.pem
