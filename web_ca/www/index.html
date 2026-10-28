@@ -48,6 +48,7 @@
       <div class="client-toolbar"><div><div id="client-count" class="big">0</div><p>VPN Profile vorhanden</p></div>
       <div class="client-actions"><input id="client-name" placeholder="Client Name" aria-label="Client Name">
         <button onclick="newClient()">Client erstellen</button><button onclick="downloadClient('tcp')">TCP OVPN</button><button onclick="downloadClient('udp')">UDP OVPN</button><button onclick="downloadClient('connect')">Connect OVPN</button><button onclick="clientInfo()">Check Client</button>
+        <button class="danger" onclick="recreateClient()">Force Recreate</button>
       </div></div>
       <h3>Client-Liste</h3><button onclick="pullClientList()">Client-Liste aktualisieren</button><div id="clients-page-list" class="client-list" role="list"><p class="muted">Client-Liste wird geladen…</p></div>
     </div>
