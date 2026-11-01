@@ -68,6 +68,19 @@ mv -f "$CRL_TEMP" "$CRL_TARGET"
 
 trap - EXIT
 
+# Remove generated OpenVPN profiles after successful CRL publication.
+CLIENT_OVPN_DIR="/ca/clients/${CLIENT}/ovpn"
+
+if [[ -d "$CLIENT_OVPN_DIR" && ! -L "$CLIENT_OVPN_DIR" ]]; then
+    rm -rf -- "$CLIENT_OVPN_DIR"
+    echo "[SUCCESS] Client OpenVPN profiles removed: ${CLIENT_OVPN_DIR}"
+elif [[ -L "$CLIENT_OVPN_DIR" ]]; then
+    echo "[ERROR] Refusing to remove a symbolic link: ${CLIENT_OVPN_DIR}" >&2
+    exit 1
+else
+    echo "[INFO] No OpenVPN profiles found for: ${CLIENT}"
+fi
+
 echo "[SUCCESS] CRL updated: ${CRL_TARGET}"
 echo "[SUCCESS] Client revoked: ${CLIENT}"
 
