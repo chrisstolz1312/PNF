@@ -11,7 +11,7 @@ services:
     networks:
       openwrt_openvpn:
         ipv4_address: 172.31.255.254
-        ipv6_address: fdff:ffff:dc59:1312:ffff:ffff:ffff:ffff
+        ipv6_address: fdff:ffff:dc59:1312::254
 
 
 networks:
