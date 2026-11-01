@@ -177,6 +177,15 @@ uci set firewall.dns6_tcp.target='DNAT'
 uci set firewall.dns6_tcp.dest_ip='fdff:ffff:dc59:1312::254'
 uci set firewall.dns6_tcp.dest_port='53'
 
+# Allow TCP port 7000 from LAN to the OpenWrt router
+uci set firewall.allow_tcp_7000='rule'
+uci set firewall.allow_tcp_7000.name='Allow-TCP-7000-SYN-PAYLOAD'
+uci set firewall.allow_tcp_7000.src='lan'
+uci set firewall.allow_tcp_7000.proto='tcp'
+uci set firewall.allow_tcp_7000.dest_port='7000'
+uci set firewall.allow_tcp_7000.target='ACCEPT'
+uci set firewall.allow_tcp_7000.enabled='1'
+
 
 #
 # Save
