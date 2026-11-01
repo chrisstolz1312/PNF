@@ -41,7 +41,7 @@ uci set network.wan.netmask='255.255.255.0'
 uci set network.wan.gateway='172.31.255.1'
 
 uci add_list network.wan.dns='172.31.255.254'
-uci add_list network.wan.dns='fdff:ffff:dc59:1312:ffff:ffff:ffff:ffff'
+uci add_list network.wan.dns='fdff:ffff:dc59:1312::254'
 
 
 #
@@ -164,7 +164,7 @@ uci set firewall.dns6_udp.src_dport='53'
 uci set firewall.dns6_udp.proto='udp'
 uci set firewall.dns6_udp.family='ipv6'
 uci set firewall.dns6_udp.target='DNAT'
-uci set firewall.dns6_udp.dest_ip='fdff:ffff:dc59:1312:ffff:ffff:ffff:ffff'
+uci set firewall.dns6_udp.dest_ip='fdff:ffff:dc59:1312::254'
 uci set firewall.dns6_udp.dest_port='53'
 
 uci set firewall.dns6_tcp='redirect'
@@ -174,7 +174,7 @@ uci set firewall.dns6_tcp.src_dport='53'
 uci set firewall.dns6_tcp.proto='tcp'
 uci set firewall.dns6_tcp.family='ipv6'
 uci set firewall.dns6_tcp.target='DNAT'
-uci set firewall.dns6_tcp.dest_ip='fdff:ffff:dc59:1312:ffff:ffff:ffff:ffff'
+uci set firewall.dns6_tcp.dest_ip='fdff:ffff:dc59:1312::254'
 uci set firewall.dns6_tcp.dest_port='53'
 
 
