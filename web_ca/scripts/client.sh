@@ -1,12 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Generate an OpenVPN client profile using the Web CA credentials.
+# Existing client certificates and private keys are reused when available.
 set -euo pipefail
 
 export EASYRSA=/ca
 export EASYRSA_PKI=/ca/pki
+# Load server connection settings used in the generated profile.
 CONFIG_FILE="/ca/config/ca.env"
 
 if [[ ! -r "$CONFIG_FILE" ]]; then
-  echo "ERROR: Konfiguration fehlt: $CONFIG_FILE" >&2
+  echo "ERROR: Configuration file is missing: $CONFIG_FILE" >&2
   exit 1
 fi
 
@@ -16,7 +19,7 @@ CLIENT=""
 MODE="tcp"
 
 usage() {
-  echo "Verwendung: $0 --name CLIENT --mode tcp|udp|connect"
+  echo "Usage: $0 --name CLIENT --mode tcp|udp|connect"
 }
 
 while (($#)); do
@@ -36,7 +39,7 @@ while (($#)); do
       exit 0
       ;;
     *)
-      echo "ERROR: Unbekannter Parameter: $1" >&2
+      echo "ERROR: Unknown argument: $1" >&2
       usage >&2
       exit 2
       ;;
@@ -44,10 +47,11 @@ while (($#)); do
 done
 
 if [[ -z "$CLIENT" || ! "$CLIENT" =~ ^[A-Za-z0-9_.-]+$ ]]; then
-  echo "ERROR: Gültiger Clientname über --name erforderlich." >&2
+  echo "ERROR: A valid client name must be provided with --name." >&2
   exit 2
 fi
 
+# Select transport-specific OpenVPN settings.
 case "$MODE" in
   tcp)
     PROTO_LINE="proto tcp-client"
@@ -65,11 +69,12 @@ case "$MODE" in
     MSSFIX=1200
     ;;
   *)
-    echo "ERROR: Modus muss tcp, udp oder connect sein." >&2
+    echo "ERROR: Mode must be tcp, udp, or connect." >&2
     exit 2
     ;;
 esac
 
+# Resolve the client certificate, key, and output profile paths.
 cd /ca
 
 CERT="/ca/pki/issued/$CLIENT.crt"
@@ -77,20 +82,23 @@ KEY="/ca/pki/private/$CLIENT.key"
 PROFILE_DIR="/ca/clients/$CLIENT/ovpn"
 PROFILE="$PROFILE_DIR/${MODE}_${CLIENT}.ovpn"
 
-# Vorhandene Zugangsdaten wiederverwenden.
+# Reuse existing client credentials; create them only if both files are absent.
 if [[ -f "$CERT" && -f "$KEY" ]]; then
-  echo "INFO: Vorhandenes Zertifikat wird wiederverwendet: $CLIENT"
+  echo "INFO: Reusing existing certificate: $CLIENT"
 elif [[ ! -e "$CERT" && ! -e "$KEY" ]]; then
   EASYRSA_BATCH=1 ./easyrsa build-client-full "$CLIENT" nopass
 else
-  echo "ERROR: Zertifikat und Schlüssel sind unvollständig. Bitte Zustand prüfen." >&2
+  echo "ERROR: Certificate and private key are incomplete. Check their state." >&2
   exit 1
 fi
 
+# Verify that all files needed for an embedded-credential profile are readable.
 for f in "$CERT" "$KEY" /ca/pki/ca.crt /ca/tls-crypt.key; do
-  [[ -r "$f" ]] || { echo "ERROR: Datei fehlt: $f" >&2; exit 1; }
+  [[ -r "$f" ]] || { echo "ERROR: Required file is missing: $f" >&2; exit 1; }
 done
 
+# Write the OpenVPN profile with embedded CA, client certificate, key,
+# and tls-crypt material. Preserve the original protocol and tunnel settings.
 mkdir -p "$PROFILE_DIR"
 
 {
@@ -131,6 +139,7 @@ $(cat /ca/tls-crypt.key)
 EOF
 } > "$PROFILE"
 
+# Preserve the original profile permissions (0644).
 chmod 0644 "$PROFILE"
 
 echo "READY: $PROFILE (mode=$MODE, tun-mtu=$TUN_MTU, mssfix=$MSSFIX)"

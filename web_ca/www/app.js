@@ -1,11 +1,13 @@
-const API = "/api";
+// OpenVPN CA Manager frontend. API routes and DOM IDs are kept unchanged.
 
+const API = "/api";
 
 function $(id)
 {
     return document.getElementById(id);
 }
 
+// Initialize the saved theme and keep the toggle icon in sync.
 function initTheme() {
     const saved = localStorage.getItem("ca-manager-theme");
     if (saved === "dark") document.body.classList.add("dark");
@@ -20,8 +22,8 @@ function initTheme() {
     if (icon) icon.textContent = document.body.classList.contains("dark") ? "☀" : "☾";
 }
 
-function showPage(pageId, button)
-{
+// Switch between dashboard sections without reloading the page.
+function showPage(pageId, button) {
     document.querySelectorAll(".page").forEach(page => {
         const active = page.id === pageId;
         page.hidden = !active;
@@ -31,19 +33,19 @@ function showPage(pageId, button)
     if (button) button.classList.add("active");
 }
 
-function renderClientList(container, clients)
-{
+// Render API client records as text-only DOM elements.
+function renderClientList(container, clients) {
     if (!container) return;
     container.replaceChildren();
     if (!Array.isArray(clients) || clients.length === 0) {
         const empty = document.createElement("p");
         empty.className = "muted";
-        empty.textContent = "Keine Client-Liste von der API geliefert.";
+        empty.textContent = "No client list returned by the API.";
         container.appendChild(empty);
         return;
     }
     clients.forEach(item => {
-        const name = typeof item === "string" ? item : (item.name ?? item.cn ?? item.commonName ?? "Unbekannter Client");
+        const name = typeof item === "string" ? item : (item.name ?? item.cn ?? item.commonName ?? "Unknown client");
         const row = document.createElement("div");
         row.className = "client-row";
         row.setAttribute("role", "listitem");
@@ -55,9 +57,9 @@ function renderClientList(container, clients)
             detail.className = "muted";
             const parts = [];
             if (item.status) parts.push(item.status);
-            if (typeof item.days_remaining === "number") parts.push(item.days_remaining < 0 ? `seit ${Math.abs(item.days_remaining)} Tagen abgelaufen` : `${item.days_remaining} Tage`);
-            if (item.profile === true) parts.push("Profil vorhanden");
-            if (item.profile === false) parts.push("Profil fehlt");
+            if (typeof item.days_remaining === "number") parts.push(item.days_remaining < 0 ? `expired ${Math.abs(item.days_remaining)} days ago` : `${item.days_remaining} days`);
+            if (item.profile === true) parts.push("Profile available");
+            if (item.profile === false) parts.push("Profile missing");
             detail.textContent = parts.join(" · "); row.appendChild(detail);
             if (item.status) {
                 const status = document.createElement("span");
@@ -70,16 +72,16 @@ function renderClientList(container, clients)
     });
 }
 
-async function pullClientList(origin = "dashboard")
-{
+// Refresh the client list, counts, and certificate summary.
+async function pullClientList(origin = "dashboard") {
     const button = origin === "ca" ? $("ca-refresh-clients-btn") : $("refresh-clients-btn");
     const oldText = button ? button.textContent : "";
-    if (button) { button.disabled = true; button.textContent = "Prüfe Clients …"; }
+    if (button) { button.disabled = true; button.textContent = "Checking clients…"; }
     try {
         const response = await fetch(`${API}/clients`, { cache: "no-store" });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const result = await response.json();
-        if (result.success === false) throw new Error(result.error || "Crawler meldet einen Fehler");
+        if (result.success === false) throw new Error(result.error || "Crawler reported an error");
         const clients = Array.isArray(result) ? result : (result.clients ?? result.clientList ?? []);
         renderClientList($("dashboard-client-list"), clients);
         renderClientList($("clients-page-list"), clients);
@@ -91,48 +93,42 @@ async function pullClientList(origin = "dashboard")
         }
         const summary = result.summary;
         if (summary) {
-            const text = `Gültig: ${summary.valid ?? 0} · Läuft bald ab: ${summary.expiring ?? 0} · Abgelaufen: ${summary.expired ?? 0} · Widerrufen: ${summary.revoked ?? 0} · Profil fehlt: ${summary.missing_profile ?? 0}`;
+            const text = `Valid: ${summary.valid ?? 0} · Expiring soon: ${summary.expiring ?? 0} · Expired: ${summary.expired ?? 0} · Revoked: ${summary.revoked ?? 0} · Profile missing: ${summary.missing_profile ?? 0}`;
             if ($("client-list-summary")) $("client-list-summary").textContent = text;
             if ($("ca-client-list-summary")) $("ca-client-list-summary").textContent = text;
         }
-        setActivityLog(`Client-Crawler abgeschlossen: ${clients.length} Client(s) gefunden.`);
+        setActivityLog(`Client crawler completed: ${clients.length} client(s) found.`);
     } catch (error) {
-        setActivityLog(`Client-Crawler fehlgeschlagen: ${error.message}`);
+        setActivityLog(`Client crawler failed: ${error.message}`);
         console.error("Client-Crawler:", error);
     } finally {
-        if (button) { button.disabled = false; button.textContent = oldText || "Client-Liste aktualisieren"; }
+        if (button) { button.disabled = false; button.textContent = oldText || "Refresh client list"; }
     }
 }
 
-
-
-async function loadStatus()
-{
+// Poll the CA and VPN server status from the backend.
+async function loadStatus() {
     try
     {
         let response =
             await fetch(`${API}/status`);
 
-
         let data =
             await response.json();
-
 
         let ca =
             $("ca-status");
 
-
         if(data.ca)
         {
-            ca.innerText = "AKTIV";
+            ca.innerText = "ACTIVE";
             ca.className = "badge ok";
         }
         else
         {
-            ca.innerText = "NICHT INITIALISIERT";
+            ca.innerText = "NOT INITIALIZED";
             ca.className = "badge warn";
         }
-
 
         const count = typeof data.clients === "number" ? data.clients :
             (Array.isArray(data.clients) ? data.clients.length : (data.clientCount ?? 0));
@@ -140,14 +136,14 @@ async function loadStatus()
         if ($("dashboard-client-count")) $("dashboard-client-count").innerText = count;
         if ($("ca-dashboard-client-count")) $("ca-dashboard-client-count").innerText = count;
         if ($("dashboard-ca-status")) {
-            $("dashboard-ca-status").innerText = data.ca ? "AKTIV" : "NICHT INITIALISIERT";
+            $("dashboard-ca-status").innerText = data.ca ? "ACTIVE" : "NOT INITIALIZED";
             $("dashboard-ca-status").className = "status " + (data.ca ? "ok" : "warn");
         }
         if ($("ca-dashboard-ca-status")) {
-            $("ca-dashboard-ca-status").innerText = data.ca ? "AKTIV" : "NICHT INITIALISIERT";
+            $("ca-dashboard-ca-status").innerText = data.ca ? "ACTIVE" : "NOT INITIALIZED";
             $("ca-dashboard-ca-status").className = "status " + (data.ca ? "ok" : "warn");
         }
-        if ($("ca-page-status")) $("ca-page-status").innerText = data.ca ? "AKTIV" : "NICHT INITIALISIERT";
+        if ($("ca-page-status")) $("ca-page-status").innerText = data.ca ? "ACTIVE" : "NOT INITIALIZED";
 
         if(data.host)
         {
@@ -160,12 +156,11 @@ async function loadStatus()
             if ($("ca-dashboard-server-detail")) $("ca-dashboard-server-detail").innerText = `Port: ${data.port ?? "-"} · Crypto: ${data.crypto ?? "-"}`;
         }
 
-
     }
     catch(error)
     {
         if ($("ca-status")) {
-            $("ca-status").innerText = "API FEHLER";
+            $("ca-status").innerText = "API ERROR";
             $("ca-status").className = "badge error";
         }
 
@@ -173,14 +168,9 @@ async function loadStatus()
     }
 }
 
-
-
-
-
-function showCASetup()
-{
+// Toggle the CA configuration form.
+function showCASetup() {
     let box = $("setup");
-
 
     box.style.display =
         box.style.display === "none"
@@ -188,13 +178,8 @@ function showCASetup()
         : "none";
 }
 
-
-
-
-
-
-async function createCA()
-{
+// Submit CA configuration to the backend.
+async function createCA() {
 
     let form =
         new URLSearchParams(
@@ -216,8 +201,6 @@ async function createCA()
             dh: dh.value
         });
 
-
-
     await fetch(
         `${API}/save-config`,
         {
@@ -226,20 +209,13 @@ async function createCA()
         }
     );
 
-
-
     log(
         "CA Build gestartet...\n\n"
     );
 
-
-
-
 await fetch(
     `${API}/build-ca`
 );
-
-
 
 let timer =
     setInterval(
@@ -251,14 +227,9 @@ let timer =
                     "/build-log"
                 );
 
-
             log(txt);
 
-
-
             scrollActivityLogs();
-
-
 
             if(
                 txt.includes("CA READY")
@@ -267,10 +238,7 @@ let timer =
 
                 clearInterval(timer);
 
-
                 await loadStatus();
-
-
 
                 $("setup").style.display =
                     "none";
@@ -281,40 +249,27 @@ let timer =
         1000
     );
 
-
 }
 
-
-
-
-
-
-async function newClient()
-{
+// Request a client certificate and its connection profiles.
+async function newClient() {
     const name = $("client-name").value.trim();
-    if (!name) return alert("Client Name fehlt");
+    if (!name) return alert("Client name is required");
 
-    setActivityLog(`Erzeuge Client und TCP/UDP/Connect-Profile: ${name}`);
+    setActivityLog(`Creating client and TCP/UDP/Connect profiles: ${name}`);
     const result = await fetchText(`/client-create?name=${encodeURIComponent(name)}`);
     setActivityLog(result);
     await loadStatus();
     await pullClientList();
 }
 
-
-
-
-
-
-async function clientInfo()
-{
+// Retrieve details for the selected client.
+async function clientInfo() {
     let name =
         $("client-name").value;
 
-
     if(!name)
-        return alert("Client Name fehlt");
-
+        return alert("Client name is required");
 
     log(
         await fetchText(
@@ -323,32 +278,22 @@ async function clientInfo()
     );
 }
 
-
-
-
-
-
-async function revokeClient()
-{
+// Confirm and request revocation of a client certificate.
+async function revokeClient() {
     let name =
         $("client-name").value;
 
-
     if(!name)
-        return alert("Client Name fehlt");
-
-
+        return alert("Client name is required");
 
     if(
         !confirm(
-            `${name} wirklich sperren?`
+            `Revoke client ${name}?`
         )
     )
     {
         return;
     }
-
-
 
     log(
         await fetchText(
@@ -356,26 +301,20 @@ async function revokeClient()
         )
     );
 
-
     await loadStatus();
 }
 
-
-
-
-async function destroyCA()
-{
+// Require confirmation before requesting CA destruction.
+async function destroyCA() {
 
     if(
         !$("destroy-confirm").checked
     )
     {
         return alert(
-            "Bitte bestätigen"
+            "Please confirm"
         );
     }
-
-
 
     log(
         await fetchText(
@@ -383,26 +322,19 @@ async function destroyCA()
         )
     );
 
-
     $("destroy-confirm").checked =
         false;
-
 
     await loadStatus();
 
 }
 
-
-
-
-
-
-async function exportServer()
-{
+// Start a server export and display its result.
+async function exportServer() {
     const button = document.querySelector('button[onclick="exportServer()"]');
     const oldText = button ? button.textContent : "";
-    if (button) { button.disabled = true; button.textContent = "Export läuft …"; }
-    log("SERVER-EXPORT: Export wird gestartet …");
+    if (button) { button.disabled = true; button.textContent = "Exporting…"; }
+    log("SERVER EXPORT: Starting export…");
 
     try {
         const response = await fetch(`${API}/server-export`, { method: "POST", cache: "no-store" });
@@ -410,75 +342,58 @@ async function exportServer()
         if (!response.ok) {
             throw new Error(text || `HTTP ${response.status}`);
         }
-        log(text || "SERVER-EXPORT: Erfolgreich abgeschlossen.");
+        log(text || "SERVER EXPORT: Completed successfully.");
     } catch (error) {
-        log(`SERVER-EXPORT FEHLER: ${error.message || error}`);
+        log(`SERVER EXPORT ERROR: ${error.message || error}`);
     } finally {
         if (button) { button.disabled = false; button.textContent = oldText; }
     }
 }
 
-
-
-function backupCA()
-{
+// Download a CA backup from the backend.
+function backupCA() {
     location.href =
         `${API}/backup-ca`;
 }
 
-
-
-function downloadClient(mode)
-{
+// Download the selected client connection profile.
+function downloadClient(mode) {
     const name = $("client-name").value.trim();
-    if (!name) return alert("Client Name fehlt");
-    if (!["tcp", "udp", "connect"].includes(mode)) return alert("Ungültiger Profiltyp");
+    if (!name) return alert("Client name is required");
+    if (!["tcp", "udp", "connect"].includes(mode)) return alert("Invalid profile type");
     location.href = `${API}/client-download?name=${encodeURIComponent(name)}&mode=${encodeURIComponent(mode)}`;
 }
 
-
-
-
-
-
-async function fetchText(endpoint)
-{
+// Fetch a text response from an API endpoint.
+async function fetchText(endpoint) {
 
     let r =
         await fetch(
             API + endpoint
         );
 
-
     return await r.text();
 
 }
 
-
-
-function setActivityLog(text)
-{
+// Replace the shared activity log contents.
+function setActivityLog(text) {
     [$("logbox")].forEach(box => {
         if (box) box.textContent = text;
     });
 }
 
-function scrollActivityLogs()
-{
+// Scroll the shared activity log to the latest entry.
+function scrollActivityLogs() {
     [$("logbox")].forEach(box => {
         if (box) box.scrollTop = box.scrollHeight;
     });
 }
 
-function log(text)
-{
+// Write a message to the shared activity log.
+function log(text) {
     setActivityLog(text);
 }
-
-
-
-
-
 
 window.addEventListener(
     "load",
