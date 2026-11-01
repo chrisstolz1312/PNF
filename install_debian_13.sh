@@ -77,12 +77,15 @@ packages=(
     ipvsadm iproute2 iptables nftables conntrack kmod
     openvpn openssl jool-dkms jool-tools docker.io
 )
-if apt-cache show docker-compose-v2 >/dev/null 2>&1; then
+if apt-cache show docker-compose >/dev/null 2>&1; then
+    # Debian 13 (Trixie) packages Compose v2 as docker-compose.
+    packages+=(docker-compose)
+elif apt-cache show docker-compose-v2 >/dev/null 2>&1; then
     packages+=(docker-compose-v2)
 elif apt-cache show docker-compose-plugin >/dev/null 2>&1; then
     packages+=(docker-compose-plugin)
 else
-    fail 'Docker Compose v2 package unavailable. Configure a trusted Debian-compatible repository before retrying.'
+    fail 'Docker Compose v2 package unavailable in configured APT repositories.'
 fi
 missing_packages=()
 for package in "${packages[@]}"; do
