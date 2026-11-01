@@ -119,9 +119,9 @@ uci add_list firewall.lan.network='vpn4'
 uci add_list firewall.lan.network='vpn6'
 
 
-uci set firewall.lan.input='ACCEPT'
+uci set firewall.lan.input='REJECT'
 uci set firewall.lan.output='ACCEPT'
-uci set firewall.lan.forward='ACCEPT'
+uci set firewall.lan.forward='REJECT'
 
 
 #
