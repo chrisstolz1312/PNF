@@ -256,6 +256,38 @@ else
     warn 'ddclient/docker-compose.yml is missing; skipping optional module.'
 fi
 
+# ============================================================
+# PNF Post-Install-Skripte
+# ============================================================
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+POST_INSTALL_DIR="${SCRIPT_DIR}/scripts"
+
+if [[ -d "$POST_INSTALL_DIR" ]]; then
+    echo
+    echo "=== PNF Post-Install-Skripte ==="
+
+    while IFS= read -r -d '' script; do
+        echo "[POST-INSTALL] Starte: $(basename "$script")"
+
+        if bash "$script"; then
+            echo "[OK] $(basename "$script")"
+        else
+            echo "[FEHLER] $(basename "$script") fehlgeschlagen!"
+            exit 1
+        fi
+
+    done < <(
+        find "$POST_INSTALL_DIR" \
+            -maxdepth 1 \
+            -type f \
+            -name '*.sh' \
+            -print0 | sort -z
+    )
+
+    echo "[OK] Alle Post-Install-Skripte abgeschlossen."
+fi
+
 printf '\n%s━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%s\n' "$C_GREEN" "$C_RESET"
 printf '%s  PNF INSTALLATION COMPLETED%s\n' "$C_GREEN" "$C_RESET"
 printf '%s━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%s\n' "$C_GREEN" "$C_RESET"
