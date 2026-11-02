@@ -1,5 +1,5 @@
-config queue
-        option enabled '1'
+        config queue
+        option enabled '0'
         option interface 'tun0'
         option download '44000'
         option upload '44000'
@@ -15,7 +15,7 @@ config queue
         option egress_ecn 'NOECN'
 
         config queue
-        option enabled '1'
+        option enabled '0'
         option interface 'tun1'
         option download '44000'
         option upload '44000'
