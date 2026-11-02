@@ -70,51 +70,6 @@ apt-get install -y \
 ok 'Dependencies installed'
 
 # Configure persistent module loading and filter unavailable optional modules.
-stage 'Configure kernel modules'
-mkdir -p /etc/modules-load.d
-cat > /etc/modules-load.d/pnf-ipvs.conf <<'MOD'
-ip_vs
-ip_vs_lc
-ip_vs_rr
-ip_vs_wrr
-nf_conntrack
-MOD
-cat > /etc/modules-load.d/pnf-jool.conf <<'MOD'
-jool
-MOD
-cat > /etc/modules-load.d/pnf-nat.conf <<'MOD'
-nf_nat
-nf_conntrack
-nf_tables
-nft_chain_nat
-nft_masq
-ip6_tables
-ip6table_nat
-ip_tables
-xt_nat
-xt_MASQUERADE
-MOD
-
-# Keep only loadable modules in the configuration files.
-# Treat Jool, IPVS, and connection tracking as mandatory.
-for conf in /etc/modules-load.d/pnf-*.conf; do
-    tmp=$(mktemp)
-    while IFS= read -r module; do
-        [[ -z $module ]] && continue
-        if modprobe "$module" 2>/dev/null; then
-            echo "$module" >> "$tmp"
-        elif [[ $module == jool || $module == ip_vs || $module == nf_conntrack ]]; then
-            rm -f "$tmp"
-            fail "Required kernel module is missing: $module"
-        else
-            warn "Optional kernel module is unavailable: $module"
-        fi
-    done < "$conf"
-    cat "$tmp" > "$conf"
-    rm -f "$tmp"
-done
-ok 'Kernel modules verified'
-
 stage 'Verify Docker and host'
 systemctl enable --now docker
 docker info >/dev/null
@@ -133,6 +88,33 @@ if [[ -n ${SUDO_USER:-} && ${SUDO_USER} != root ]]; then
     ok "Docker group configured for $SUDO_USER (login required for membership to take effect)"
 fi
 ok 'Host verification completed'
+
+# ============================================================
+# PNF Host-Setup: required scripts, executed in filename order
+# ============================================================
+stage 'Configure PNF kernel modules and NAT66'
+POST_INSTALL_DIR="$ROOT/scripts"
+[[ -d "$POST_INSTALL_DIR" ]] || fail "Missing scripts directory: $POST_INSTALL_DIR"
+for required_script in 10_install_kmods.sh 20_configure_nat66.sh; do
+    [[ -f "$POST_INSTALL_DIR/$required_script" ]] || \
+        fail "Missing required script: $POST_INSTALL_DIR/$required_script"
+done
+
+scripts=()
+while IFS= read -r -d '' script; do
+    scripts+=("$script")
+done < <(find "$POST_INSTALL_DIR" -maxdepth 1 -type f -name '*.sh' -print0 | sort -z)
+
+for script in "${scripts[@]}"; do
+    info "Running host setup: $(basename "$script")"
+    if bash "$script"; then
+        ok "$(basename "$script") completed"
+    else
+        fail "Host setup failed: $(basename "$script")"
+    fi
+done
+ok 'PNF host setup completed'
+
 
 stage 'Start Web CA'
 WEB_CA_DIR="$ROOT/web_ca"
@@ -224,38 +206,6 @@ if [[ -f "$DDCLIENT_DIR/docker-compose.yml" ]]; then
     info 'DynDNS updates require enabled credentials.'
 else
     warn 'ddclient/docker-compose.yml is missing; skipping optional module.'
-fi
-
-# ============================================================
-# PNF Post-Install-Skripte
-# ============================================================
-
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-POST_INSTALL_DIR="${SCRIPT_DIR}/scripts"
-
-if [[ -d "$POST_INSTALL_DIR" ]]; then
-    echo
-    echo "=== PNF Post-Install-Skripte ==="
-
-    while IFS= read -r -d '' script; do
-        echo "[POST-INSTALL] Starte: $(basename "$script")"
-
-        if bash "$script"; then
-            echo "[OK] $(basename "$script")"
-        else
-            echo "[FEHLER] $(basename "$script") fehlgeschlagen!"
-            exit 1
-        fi
-
-    done < <(
-        find "$POST_INSTALL_DIR" \
-            -maxdepth 1 \
-            -type f \
-            -name '*.sh' \
-            -print0 | sort -z
-    )
-
-    echo "[OK] Alle Post-Install-Skripte abgeschlossen."
 fi
 
 printf '\n%s━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━%s\n' "$C_GREEN" "$C_RESET"
