@@ -34,6 +34,9 @@ RUN mkdir -p \
     /scripts \
     /ca/config
 
+# Kernel modules are managed by the Docker host, not this container.
+RUN ln -sf /dev/null /etc/systemd/system/systemd-modules-load.service
+
 # Web application and CA scripts.
 COPY www/ /var/www/html/
 COPY cgi/ /var/www/cgi-bin/
