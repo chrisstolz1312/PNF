@@ -2,3 +2,6 @@
 /openwrt_gw/ovpn_gw*/image
 /web_ca/crl/*.pem
 /web_ca/server_export/
+
+# Local OpenWrt password hashes (never commit)
+/config/secrets/

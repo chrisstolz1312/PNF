@@ -32,6 +32,7 @@ services:
 
 
     volumes:
+      - ../../config/secrets/openwrt-root.hash:/etc/pnf/openwrt-root.hash:ro
       - ../../web_ca/server_export:/etc/openvpn:ro
       - ../../web_ca/crl:/etc/web_ca/crl:ro
 

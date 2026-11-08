@@ -149,6 +149,9 @@ done
 ok 'PNF host setup completed'
 
 
+stage 'Configure OpenWrt root password'
+source "$ROOT/lib/openwrt_password.sh"
+
 stage 'Start Web CA'
 WEB_CA_DIR="$ROOT/web_ca"
 [[ -f "$WEB_CA_DIR/build.sh" ]] || fail "Missing: $WEB_CA_DIR/build.sh"
