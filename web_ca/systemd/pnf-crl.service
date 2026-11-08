@@ -1,0 +1,11 @@
+[Unit]
+Description=PNF Certificate Revocation List Refresh
+After=local-fs.target
+ConditionPathExists=/ca/pki/ca.crt
+
+[Service]
+Type=oneshot
+
+ExecStart=/bin/bash /scripts/refresh_crl.sh
+
+TimeoutStartSec=300

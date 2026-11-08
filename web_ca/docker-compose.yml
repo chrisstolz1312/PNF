@@ -9,13 +9,26 @@ services:
 
     restart: unless-stopped
 
-    ports:
-      - "8080:80"
+    # systemd als PID 1
+    init: false
+    stop_signal: SIGRTMIN+3
+    stop_grace_period: 30s
+
+    # Testkonfiguration für systemd und cgroup v2
+    privileged: true
+    cgroup: private
+
+    tmpfs:
+      - /run
+      - /run/lock
 
     volumes:
       - ./ca:/ca
       - ./server_export:/server_export
       - ./crl:/crl
+
+    ports:
+      - "8080:80"
 
     networks:
       admin_bridge:

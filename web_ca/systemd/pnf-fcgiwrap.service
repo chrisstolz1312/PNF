@@ -1,0 +1,22 @@
+[Unit]
+Description=PNF FastCGI Wrapper
+After=local-fs.target
+Before=nginx.service
+
+[Service]
+Type=simple
+
+RuntimeDirectory=pnf-fcgiwrap
+RuntimeDirectoryMode=0755
+
+ExecStart=/usr/bin/spawn-fcgi \
+    -n \
+    -s /run/fcgiwrap.sock \
+    -M 0666 \
+    -- /usr/sbin/fcgiwrap
+
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

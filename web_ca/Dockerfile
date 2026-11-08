@@ -1,16 +1,31 @@
-FROM alpine:latest
+FROM debian:13
 
+ENV DEBIAN_FRONTEND=noninteractive
+ENV container=docker
 
-RUN apk add --no-cache \
-    nginx \
-    bash \
-    easy-rsa \
-    openssl \
-    openvpn \
-    fcgiwrap \
-    spawn-fcgi \
-    util-linux
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        systemd \
+        systemd-sysv \
+        nginx \
+        bash \
+        easy-rsa \
+        openssl \
+        openvpn \
+        fcgiwrap \
+        spawn-fcgi \
+        util-linux \
+        ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
+# Systemd services that are not useful inside this container.
+RUN systemctl mask \
+        dev-hugepages.mount \
+        sys-fs-fuse-connections.mount \
+        systemd-remount-fs.service \
+        systemd-udev-trigger.service \
+        systemd-udevd.service \
+        getty.target
 
 RUN mkdir -p \
     /run/nginx \
@@ -19,23 +34,28 @@ RUN mkdir -p \
     /scripts \
     /ca/config
 
-
+# Web application and CA scripts.
 COPY www/ /var/www/html/
-COPY nginx.conf /etc/nginx/http.d/default.conf
 COPY cgi/ /var/www/cgi-bin/
 COPY scripts/ /scripts/
 
-RUN chmod +x \
-    /var/www/cgi-bin/* \
-    /scripts/* || true
+# Debian Nginx site configuration.
+COPY nginx.conf /etc/nginx/sites-available/default
 
+# PNF systemd units.
+COPY systemd/pnf-fcgiwrap.service /etc/systemd/system/
+COPY systemd/pnf-crl.service /etc/systemd/system/
+COPY systemd/pnf-crl.timer /etc/systemd/system/
+
+RUN chmod +x /var/www/cgi-bin/* /scripts/* && \
+    systemctl enable nginx.service && \
+    systemctl enable pnf-fcgiwrap.service && \
+    systemctl enable pnf-crl.timer
 
 VOLUME ["/ca"]
 
-
 EXPOSE 80
 
+STOPSIGNAL SIGRTMIN+3
 
-CMD sh -c "\
-    spawn-fcgi -s /run/fcgiwrap.sock -M 766 /usr/bin/fcgiwrap ; \
-    nginx -g 'daemon off;'"
+CMD ["/sbin/init"]

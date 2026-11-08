@@ -1,0 +1,11 @@
+[Unit]
+Description=PNF Daily Certificate Revocation List Refresh
+
+[Timer]
+OnCalendar=*-*-* 00:00:00
+Persistent=true
+AccuracySec=1min
+Unit=pnf-crl.service
+
+[Install]
+WantedBy=timers.target
