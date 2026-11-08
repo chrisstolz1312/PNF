@@ -72,7 +72,7 @@ stage 'Verify Debian package availability'
 # Debian package naming and availability may vary by repository and architecture.
 # Never silently omit Jool or Docker Compose: both are required by this stack.
 packages=(
-    ca-certificates curl git jq tar gzip unzip tree
+    ca-certificates curl git jq tar gzip unzip tree ufw
     build-essential dkms "linux-headers-$(uname -r)"
     ipvsadm iproute2 iptables nftables conntrack kmod
     openvpn openssl jool-dkms jool-tools docker.io

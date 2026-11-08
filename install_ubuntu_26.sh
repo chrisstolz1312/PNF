@@ -62,7 +62,7 @@ ok 'Ubuntu Universe enabled'
 
 stage 'Install dependencies'
 apt-get install -y \
-    ca-certificates curl git jq tar gzip unzip tree \
+    ca-certificates curl git jq tar gzip unzip tree ufw \
     build-essential dkms "linux-headers-$(uname -r)" \
     ipvsadm iproute2 iptables nftables conntrack kmod \
     openvpn openssl jool-dkms jool-tools \
