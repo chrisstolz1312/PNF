@@ -1,15 +1,46 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="PNF - Prototype Network Fabric. Self-hosted OpenVPN infrastructure with OpenWrt, IPv4, IPv6 and IPVS load balancing.">
-    <title>PNF - Prototype Network Fabric</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="PNF — Prototype Network Fabric: self-hosted OpenVPN infrastructure with eight OpenWrt gateways, IPv4/IPv6, IPVS load balancing, DNS and certificate management.">
+  <meta name="theme-color" content="#f1f5fb">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://chrisstolz1312.github.io/PNF/">
+  <title>PNF — Prototype Network Fabric | OpenVPN &amp; OpenWrt</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>PNF - Prototype Network Fabric</h1>
-    <p>Self-hosted OpenVPN infrastructure with Docker, OpenWrt, IPv4/IPv6 and IPVS load balancing.</p>
-    <p>Open-source project currently in alpha development.</p>
-    <a href="https://github.com/chrisstolz1312/PNF">View PNF on GitHub</a>
+  <header class="topbar">
+    <a class="brand" href="#home" aria-label="PNF home"><span class="brand-mark">◆</span><span><strong>PNF</strong><small>Prototype Network Fabric</small></span></a>
+    <div class="header-right"><span class="badge"><span class="status-dot"></span>Open Source</span><span class="badge alpha">ALPHA RELEASE</span></div>
+  </header>
+  <nav class="tabs" aria-label="Main navigation">
+    <a class="tab active" href="#home">Overview</a><a class="tab" href="#architecture">Architecture</a><a class="tab" href="#features">Features</a><a class="tab" href="#installation">Installation</a><a class="tab" href="https://github.com/chrisstolz1312/PNF">GitHub ↗</a>
+  </nav>
+  <main id="home">
+    <section class="hero card">
+      <div class="eyebrow"><span class="status-dot"></span> NETWORK INFRASTRUCTURE · OPEN SOURCE</div>
+      <h1>Build your own<br><span>VPN network fabric.</span></h1>
+      <p class="hero-copy">PNF combines eight containerized OpenWrt OpenVPN gateways, dual-stack networking and Linux IPVS load balancing in one self-hosted infrastructure project.</p>
+      <div class="actions"><a class="btn primary" href="https://github.com/chrisstolz1312/PNF">View on GitHub <span aria-hidden="true">↗</span></a><a class="btn secondary" href="#architecture">Explore architecture ↓</a></div>
+      <div class="hero-foot"><span class="mini-dot"></span> Experimental alpha software <span class="separator">/</span> Designed for homelabs and learning</div>
+    </section>
+    <section class="summary-grid" aria-label="Project at a glance">
+      <article class="card stat"><span class="stat-icon">▦</span><div class="stat-number">08</div><h2>OpenWrt gateways</h2><p>Four TCP and four UDP instances</p></article>
+      <article class="card stat"><span class="stat-icon">⇄</span><div class="stat-number">IPv4 <em>+</em> IPv6</div><h2>Dual-stack</h2><p>Routing and connectivity across both IP families</p></article>
+      <article class="card stat"><span class="stat-icon">◇</span><div class="stat-number">IPVS</div><h2>Load balancing</h2><p>Linux IPVS distributes VPN connections</p></article>
+    </section>
+    <section id="architecture" class="section-block"><div class="section-heading"><span class="section-index">01 / SYSTEM DESIGN</span><h2>Architecture</h2><p>Modular components, one connected fabric.</p></div>
+      <div class="card architecture"><div class="flow-node client"><span class="node-icon">◎</span><div><strong>OpenVPN Clients</strong><small>IPv4 / IPv6 · TCP / UDP · Port 1194</small></div></div><div class="connector"></div><div class="flow-node ipvs"><span class="node-icon">⇄</span><div><strong>Linux IPVS</strong><small>Least-connections load balancing</small></div></div><div class="branch"><div class="branch-line"></div><div class="branch-line"></div></div><div class="gateway-grid"><div class="gateway"><span class="protocol">TCP</span><strong>4 × OpenWrt</strong><small>VPN gateways</small></div><div class="gateway"><span class="protocol">UDP</span><strong>4 × OpenWrt</strong><small>VPN gateways</small></div></div><div class="arch-caption">Docker bridge network · Certificate Authority · DNS infrastructure</div></div>
+    </section>
+    <section id="features" class="section-block"><div class="section-heading"><span class="section-index">02 / CAPABILITIES</span><h2>What's inside</h2><p>The building blocks of a self-hosted VPN lab.</p></div>
+      <div class="feature-grid"><article class="card feature"><div class="feature-icon">⌘</div><h3>OpenVPN + OpenWrt</h3><p>Eight independent containerized gateways with TCP and UDP support.</p></article><article class="card feature"><div class="feature-icon">⇄</div><h3>IPVS balancing</h3><p>Linux kernel-based connection distribution across gateway backends.</p></article><article class="card feature"><div class="feature-icon">◇</div><h3>Certificate management</h3><p>Browser-based Web CA for managing certificates and VPN profiles.</p></article><article class="card feature"><div class="feature-icon">◈</div><h3>Unbound DNS</h3><p>Integrated DNS service for the VPN environment.</p></article><article class="card feature"><div class="feature-icon">▤</div><h3>Docker monitoring</h3><p>Container logs and health visibility with Dozzle and healthchecks.</p></article><article class="card feature"><div class="feature-icon">◎</div><h3>Dual-stack networking</h3><p>IPv4 and IPv6 connectivity, with supporting host network configuration.</p></article></div>
+    </section>
+    <section id="installation" class="section-block"><div class="section-heading"><span class="section-index">03 / GET STARTED</span><h2>Installation</h2><p>Built for dedicated test systems and virtual machines.</p></div>
+      <div class="card install-card"><div class="install-top"><div><span class="eyebrow">SUPPORTED INSTALLERS</span><h3>Debian 13 <span class="and">&amp;</span> Ubuntu Server 26.04</h3><p>Use the installer and deployment guidance from the repository README. Review scripts before running them.</p></div><span class="badge alpha">ALPHA · NOT PRODUCTION READY</span></div><div class="code-row"><code>git clone https://github.com/chrisstolz1312/PNF.git</code></div><div class="actions"><a class="btn primary" href="https://github.com/chrisstolz1312/PNF#readme">Read installation guide ↗</a><a class="btn secondary" href="https://github.com/chrisstolz1312/PNF/issues">Issues &amp; feedback ↗</a></div><p class="warning">PNF modifies host networking, firewall and kernel settings and uses privileged containers. Test in a VM with a verified snapshot.</p></div>
+    </section>
+  </main>
+  <footer><span>◆ PNF — Prototype Network Fabric</span><span>Open source · Alpha software</span><a href="https://github.com/chrisstolz1312/PNF">Source code ↗</a></footer>
 </body>
 </html>
