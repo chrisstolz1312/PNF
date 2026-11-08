@@ -4,9 +4,9 @@
 # then deploys OpenWrt gateways, Unbound, IPVS and the Dozzle dashboard.
 set -Eeuo pipefail
 
-[[ $EUID -eq 0 ]] || { echo 'Run with sudo: sudo ./install.sh' >&2; exit 1; }
+[[ $EUID -eq 0 ]] || { echo 'Run with sudo: sudo ./install_ubuntu_26.sh' >&2; exit 1; }
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-LOG=/var/log/pnf-install.log
+LOG=/var/log/pnf-install-ubuntu.log
 
 # Preserve terminal colors while writing an ANSI-free log file.
 if [[ -t 1 && -z ${NO_COLOR:-} ]]; then
@@ -33,6 +33,8 @@ trap 'on_error "$LINENO" "$BASH_COMMAND"' ERR
 
 source /etc/os-release
 [[ ${ID:-} == ubuntu && ${VERSION_ID:-} == 26.04 ]] || fail 'Requires Ubuntu Server 26.04'
+[[ $(uname -m) == x86_64 ]] || fail 'Requires an amd64 (x86_64) host'
+[[ -d /run/systemd/system ]] || fail 'Requires a systemd-based Ubuntu host'
 command -v apt-get >/dev/null
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
@@ -40,16 +42,28 @@ printf '\n%s%sPNF INSTALLER · Ubuntu Server 26.04%s\n' "$C_BOLD" "$C_CYAN" "$C_
 info "Installation directory: $ROOT"
 info "Log file: $LOG"
 
+# A KVM/libvirt snapshot must be taken on the hypervisor, not inside the guest.
+# Stop before ANY apt operation until the operator confirms the snapshot.
+stage 'Confirm KVM snapshot'
+printf '%s\n' 'Create a snapshot of the Ubuntu VM on the KVM host NOW.' \
+    'For virt-manager: shut down the VM, create a snapshot (if supported),' \
+    'then boot it again and rerun this installer.'
+if [[ ${PNF_SNAPSHOT_CONFIRMED:-} != YES ]]; then
+    [[ -t 0 ]] || fail 'Snapshot confirmation required (set PNF_SNAPSHOT_CONFIRMED=YES after taking it).'
+    read -r -p 'KVM snapshot created and verified? Type YES to proceed: ' snapshot_answer
+    [[ $snapshot_answer == YES ]] || fail 'Aborted before apt update; no packages were changed.'
+fi
+ok 'Operator confirmed external KVM snapshot'
+
 stage 'Update system'
-# Restore the system clock from the hardware clock after a VM snapshot rollback.
-hwclock --hctosys --utc
+# NTP is the preferred time source; do not force the guest clock from RTC.
 apt-get update
 apt-get -y full-upgrade
 if [[ -f /var/run/reboot-required ]] || {
     [[ -e /boot/vmlinuz ]] &&
     [[ "$(readlink -f /boot/vmlinuz)" != "/boot/vmlinuz-$(uname -r)" ]]
 }; then
-    warn 'Reboot required. Run sudo ./install.sh again after reboot.'
+    warn 'Reboot required. Run sudo ./install_ubuntu_26.sh again after reboot.'
     exit 20
 fi
 ok 'System update completed'
@@ -60,16 +74,35 @@ add-apt-repository -y universe
 apt-get update
 ok 'Ubuntu Universe enabled'
 
+stage 'Verify Ubuntu package availability'
+packages=(
+    ca-certificates curl git jq tar gzip unzip tree
+    build-essential dkms "linux-headers-$(uname -r)"
+    ipvsadm iproute2 iptables nftables conntrack kmod ufw
+    openvpn openssl jool-dkms jool-tools docker.io
+)
+if apt-cache show docker-compose-v2 >/dev/null 2>&1; then
+    packages+=(docker-compose-v2)
+elif apt-cache show docker-compose-plugin >/dev/null 2>&1; then
+    packages+=(docker-compose-plugin)
+elif apt-cache show docker-compose >/dev/null 2>&1; then
+    packages+=(docker-compose)
+else
+    fail 'Docker Compose v2 package unavailable in configured APT repositories.'
+fi
+missing_packages=()
+for package in "${packages[@]}"; do
+    apt-cache show "$package" >/dev/null 2>&1 || missing_packages+=("$package")
+done
+if (( ${#missing_packages[@]} )); then
+    fail "Required Ubuntu packages unavailable: ${missing_packages[*]}. Check apt sources and running kernel."
+fi
+ok 'Required packages are available'
+
 stage 'Install dependencies'
-apt-get install -y \
-    ca-certificates curl git jq tar gzip unzip tree ufw \
-    build-essential dkms "linux-headers-$(uname -r)" \
-    ipvsadm iproute2 iptables nftables conntrack kmod \
-    openvpn openssl jool-dkms jool-tools \
-    docker.io docker-compose-v2
+apt-get install -y "${packages[@]}"
 ok 'Dependencies installed'
 
-# Configure persistent module loading and filter unavailable optional modules.
 stage 'Verify Docker and host'
 systemctl enable --now docker
 docker info >/dev/null
