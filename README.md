@@ -1,101 +1,160 @@
-# :P-NF — Prototype Network Fabric
+# PNF — Prototype Network Fabric
 
-**Alpha release** · Modular OpenVPN infrastructure for **Ubuntu Server 26.04**.
+**Self-hosted OpenVPN infrastructure with Docker, OpenWrt, IPv4/IPv6 and IPVS load balancing.**
 
-PNF provides an installer-driven VPN gateway stack built around containerized OpenWrt instances, a web-based certificate authority, and IPVS load balancing for TCP and UDP. Supporting services include Unbound DNS, optional DynDNS via ddclient, and container monitoring through Dozzle.
+PNF is an open-source project for building a modular OpenVPN environment on a Linux server. It combines **eight containerized OpenWrt VPN gateways** (four TCP and four UDP) with Linux IPVS load balancing, a browser-based certificate authority, Unbound DNS, and operational tools.
+
+Designed for homelabs, networking experiments and administrators who want to explore a multi-gateway OpenVPN deployment rather than a single VPN container.
+
+**Supported installer targets:** Debian 13 (Trixie) and Ubuntu Server 26.04, on x86-64 (amd64).
 
 > [!WARNING]
-> **Alpha software.** PNF is under active development and is not yet a hardened, production-ready distribution. Review all scripts, network exposure, certificate handling, and firewall rules before deployment. Create a VM snapshot and an off-host backup first.
+> **Alpha software — not production-ready.** PNF changes host networking, firewall rules and kernel settings, and uses privileged containers. Review the code and network exposure before running it. Create a verified VM snapshot and an off-host backup first. The installer requires explicit snapshot confirmation.
 
 ## Features
 
-- **OpenVPN gateways:** eight containerized OpenWrt backends (four TCP and four UDP).
-- **Load balancing:** Linux IPVS for TCP and UDP, with IPv4 and IPv6 support.
-- **Web CA:** browser-based certificate authority for CA and client management, plus server certificate export.
-- **DNS:** Unbound integration.
-- **Dynamic DNS:** optional ddclient module; provider credentials must be configured separately.
-- **Monitoring:** optional Dozzle web UI for Docker container status, logs, and manual actions.
-- **Modular scripts:** separate build and shutdown scripts for individual components.
+| Component | Description |
+| --- | --- |
+| OpenVPN | Eight OpenWrt-based gateways: four TCP and four UDP |
+| Load balancing | Linux IPVS for TCP and UDP, using least-connections (`lc`) scheduling |
+| Dual-stack networking | IPv4 and IPv6 gateway backends; NAT66 and Jool host setup |
+| Certificate management | Web-based CA with server certificate export |
+| DNS | Unbound integration |
+| Host filtering | UFW rules to isolate the VPN Docker bridge from host services |
+| Monitoring | Dozzle for Docker container status and logs |
+| Dynamic DNS | Optional `ddclient` service |
+| Deployment | Separate installers for Debian 13 and Ubuntu Server 26.04 |
 
 ## Architecture
 
 ```text
-Ubuntu Server 26.04
-│
-├── install.sh                 Main installer
-├── config/                    PNF configuration
-├── web_ca/                    Web CA and server certificate export
-├── openwrt_gw/                OpenWrt VPN gateways, Unbound, IPVS
-├── dozzle/                    Optional Docker monitoring UI
-├── ddclient/                  Optional DynDNS service
-├── backup.sh                  Home-directory archive helper
-├── build.sh                   Project-level helper (if present)
-└── down.sh                    Project-level helper (if present)
+                      OpenVPN clients
+                      IPv4 and IPv6
+                            |
+                      TCP/UDP :1194
+                            |
+                     Linux IPVS (lc)
+                       /          \
+                      /            \
+          TCP OpenWrt gateways   UDP OpenWrt gateways
+               gw1–gw4              gw1–gw4
+                      \            /
+                       Docker bridge
+                            |
+                  VPN routing / DNS
+
+ Web CA -------- server certificate export --------> OpenVPN gateways
+ Unbound ------- DNS services
+ Dozzle -------- Docker monitoring
+ ddclient ------ optional Dynamic DNS
 ```
 
-### Traffic and services
+The IPVS configuration defines four backends per protocol, on a dual-stack Docker network. IPVS handles **both TCP and UDP**; HAProxy is not part of the current IPVS-only deployment.
+
+### Repository layout
 
 ```text
-VPN clients
-    │
-    ▼
-Host IPVS (TCP/UDP, IPv4/IPv6)
-    │
-    ├── OpenWrt TCP gateways × 4
-    └── OpenWrt UDP gateways × 4
-              │
-              └── VPN and DNS services
-
-Web CA ──► server_export/ ──► VPN gateway configuration
-Dozzle ──► Docker status and logs
-
-ddclient ──► optional public IP / DynDNS updates
+PNF/
+├── install_debian_13.sh       Debian 13 installer
+├── install_ubuntu_26.sh       Ubuntu Server 26.04 installer
+├── build.sh                   Project build/start helper
+├── down.sh                    Project shutdown helper
+├── backup.sh                  Archive backup helper
+├── config/                    PNF configuration
+├── scripts/                   Kernel, NAT66 and UFW host setup
+├── web_ca/                    Certificate authority and exports
+├── openwrt_gw/
+│   ├── ovpn_gw1_tcp/ ... ovpn_gw4_tcp/
+│   ├── ovpn_gw1_udp/ ... ovpn_gw4_udp/
+│   ├── ipvs/                 IPVS configuration and service
+│   ├── unbound/              DNS service
+│   └── build.sh              Gateway, DNS and IPVS deployment
+├── dozzle/                    Container monitoring
+└── ddclient/                  Optional Dynamic DNS
 ```
-
-PNF uses **IPVS for both TCP and UDP**; HAProxy is not part of the current IPVS-only setup.
 
 ## Requirements
 
-- Ubuntu Server **26.04** (the installer checks the OS version).
-- Root access (`sudo`) and working APT repositories.
-- Internet connectivity for system packages and container images.
-- A working system clock and RTC; the installer synchronizes the system clock from the RTC before its initial APT update.
-- Kernel support for IPVS, connection tracking, TUN, and Jool.
-- Sufficient CPU, memory, and disk space for the OpenWrt containers and supporting services.
-- A prepared OpenWrt root filesystem at `openwrt_gw/image/openwrt-x86-64-generic-rootfs.tar.gz`.
+- **Debian 13** or **Ubuntu Server 26.04**, x86-64 (amd64), with systemd.
+- Root access via `sudo`, internet access and working APT repositories.
+- A compatible Linux kernel and package repositories providing Docker, Docker Compose v2, IPVS, TUN, Jool and their dependencies.
+- Enough CPU, RAM and storage for eight OpenWrt gateways and the supporting services.
+- The OpenWrt root filesystem archive at:
 
-The installer installs its required packages, including Docker, Docker Compose v2, OpenVPN, IPVS tools, and Jool. A reboot may be required after system updates.
+  ```text
+  openwrt_gw/image/openwrt-x86-64-generic-rootfs.tar.gz
+  ```
+
+- A verified VM snapshot taken **on the hypervisor** before installation.
+
+The installer installs host dependencies and checks required components. Depending on the system update, a reboot may be necessary before continuing.
 
 ## Installation
 
 > [!IMPORTANT]
-> Review the installer and module configuration before running it. Installation changes system packages, kernel module settings, Docker services, and networking.
+> Read the installer and the host configuration scripts before running them. The installation updates packages and changes host networking, firewall configuration and Docker services.
 
-1. Copy or clone the project into your user's home directory.
-2. Confirm that the OpenWrt root filesystem archive exists at the path listed above.
-3. Start the installer:
+Clone the repository:
 
-   ```bash
-   cd ~/PNF
-   sudo bash ./install.sh
-   ```
+```bash
+git clone https://github.com/chrisstolz1312/PNF.git
+cd PNF
+```
 
-4. If the installer requests a reboot, reboot and run the command again.
-5. When prompted, open the **Web CA** interface, create the CA, and ensure the server certificates have been exported. Return to the installer to continue validation.
-6. The installer configures the IPVS-only mode and builds the OpenWrt/Unbound/IPVS stack. It then starts the auxiliary UI and DynDNS services if their Compose configurations are present.
+Verify that the OpenWrt root filesystem archive exists at the path listed above. Then run **one** installer, depending on the operating system.
+
+**Debian 13:**
+
+```bash
+sudo bash ./install_debian_13.sh
+```
+
+**Ubuntu Server 26.04:**
+
+```bash
+sudo bash ./install_ubuntu_26.sh
+```
+
+The installation workflow:
+
+1. Requests confirmation of a verified hypervisor snapshot before modifying packages.
+2. Updates the host and installs required dependencies.
+3. Configures kernel modules, NAT66 and UFW using the scripts in `scripts/`.
+4. Starts the Web CA and waits for you to create the CA and export the server credentials.
+5. Validates the certificate files and the server certificate/private-key match.
+6. Configures IPVS for TCP and UDP, builds and starts the OpenWrt gateways, Unbound and IPVS.
+7. Starts Dozzle and the optional `ddclient` module if configured.
+
+If the installer reports that a reboot is required, reboot and rerun the same installer.
 
 ### Web interfaces
 
-| Service | Default URL | Purpose |
+| Service | Address | Purpose |
 | --- | --- | --- |
-| Web CA | `http://<SERVER-IP>:8080` | CA, certificates, and client management |
-| Dozzle | `http://<SERVER-IP>:8081` | Docker status and logs |
+| Web CA | `http://<SERVER-IP>:8080` | Certificate authority and certificate management |
+| Dozzle | `http://<SERVER-IP>:8081` | Container monitoring and logs |
 
-Do not expose these interfaces directly to the public Internet without appropriate access controls and network restrictions.
+These are **HTTP** interfaces. Do not expose them directly to the public internet. Restrict access to a trusted administration network and use suitable authentication and transport protection where applicable.
+
+## Networking and security
+
+### VPN and load balancing
+
+The IPVS service listens on **port 1194**, for both TCP and UDP, on the host's detected IPv4 and IPv6 addresses. Its configuration uses the **least-connections** scheduler and forwards traffic to four TCP or four UDP OpenWrt backends.
+
+OpenWrt containers have dedicated IPv4 and IPv6 addresses on the `openwrt_openvpn` Docker network. The gateway definitions also contain Docker port mappings for individual instances; these are separate from the IPVS frontend.
+
+### Host firewall
+
+The host setup includes `scripts/30_configure_ufw.sh`, which applies a deny rule for incoming traffic on the `br-openvpn` bridge. **This does not constitute a default-deny firewall for all host interfaces**: the current script sets default incoming, outgoing and routed policies to allow. Review and adapt these rules to your deployment before exposing the server.
+
+### Privileged containers
+
+Some components require elevated Docker privileges, host networking capabilities or access to `/dev/net/tun`. Review the Compose files and protect access to the Docker daemon. Membership in the Docker group effectively grants root-level control over the host.
 
 ## Certificate management
 
-The Web CA maintains the certificate authority and generates the server credentials. The server export directory is expected to contain:
+The Web CA is responsible for CA and server credentials. The installer expects these exported files:
 
 ```text
 web_ca/server_export/
@@ -106,81 +165,108 @@ web_ca/server_export/
 └── tls-crypt.key
 ```
 
-The installer checks for these files and validates the CA/server certificates and matching server private key before continuing. **Protect `server.key`, CA private keys, and backups**: these are sensitive credentials.
+During installation, PNF checks that the files exist, that the certificates are valid at the time of checking, and that the server certificate matches the server private key.
 
-Depending on the Web CA scripts installed, a server export may also run automatically after CA creation or on Web CA startup. The manual export remains available as a fallback.
+**Never commit private keys, CA secrets, provider tokens or generated credentials.** Protect exported keys and backups, and review `.gitignore` before publishing changes.
+
+## Healthchecks and monitoring
+
+The gateway Compose configuration is being extended with Docker healthchecks. The intended checks cover:
+
+- An HTTP alive response (`I AM ALIVE`) on port **7000** inside each gateway.
+- A TCP or UDP listener on port **1194**, for both IPv4 and IPv6, according to the gateway type.
+
+> [!NOTE]
+> Healthcheck changes are under validation. Confirm that all eight gateway containers report `healthy` after a clean deployment before treating the feature as verified. A socket/listener check does **not** prove that a VPN client can authenticate or pass traffic. Docker's `restart: unless-stopped` does not automatically restart a container solely because its health status becomes `unhealthy`.
+
+Inspect the running containers:
+
+```bash
+sudo docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+```
+
+Inspect a gateway health status, once the healthcheck-enabled image is deployed:
+
+```bash
+sudo docker inspect openwrt_gw1_tcp --format '{{json .State.Health}}'
+```
+
+Dozzle provides a web interface for observing container logs and status. Restrict access to it, particularly if it has Docker socket access or container-control permissions.
+
+## Logs and troubleshooting
+
+**Debian installer log:**
+
+```bash
+sudo tail -n 100 /var/log/pnf-install-debian.log
+```
+
+**Ubuntu installer log:**
+
+```bash
+sudo tail -n 100 /var/log/pnf-install-ubuntu.log
+```
+
+Inspect a specific container:
+
+```bash
+sudo docker logs --tail 100 openwrt_gw1_tcp
+```
+
+Check IPVS rules and backend statistics:
+
+```bash
+sudo ipvsadm -Ln
+sudo ipvsadm -Ln --stats
+```
+
+For installation issues, include the operating system, kernel version, affected component and relevant redacted log excerpts in a bug report.
 
 ## Optional services
 
-### Dozzle
+### Dynamic DNS (`ddclient`)
 
-Dozzle is a lightweight interface for observing Docker containers and viewing logs. If configured with Docker actions, it can also start, stop, or restart containers.
-
-```bash
-cd ~/PNF/dozzle
-bash ./build.sh   # If present
-# or: docker compose up -d
-```
-
-Stop it with `bash ./down.sh` (if present) or `docker compose down`.
-
-> [!CAUTION]
-> Access to the Docker socket can grant powerful control over the host, even when the socket is mounted read-only. Restrict Dozzle to a trusted administration network and configure authentication as appropriate.
-
-### ddclient
-
-The `ddclient/` module provides optional dynamic DNS updates. Edit `ddclient/ddclient.conf` for your provider and hostname. Commented-out example credentials are **not active configuration**; a container can still emit warnings or restart until configured correctly.
+The `ddclient/` module can update a DNS hostname when the public IP address changes. Configure your provider and credentials in the module's configuration before relying on it.
 
 ```bash
-cd ~/PNF/ddclient
+cd ddclient
 docker compose up -d
 ```
 
-Do not commit real DynDNS passwords or tokens to Git.
+Do not commit provider passwords or API tokens.
 
-## Day-to-day operations
+### Dozzle
 
-Inspect running containers:
-
-```bash
-docker ps
-docker compose -f ~/dozzle/docker-compose.yml ps
-```
-
-Inspect the installation log:
+Dozzle is started by the installer. It can also be managed from its module directory:
 
 ```bash
-sudo tail -n 100 /var/log/pnf-install.log
+cd dozzle
+docker compose ps
 ```
-
-Start or stop individual modules using their local `build.sh` / `down.sh` scripts where available. Avoid removing Docker volumes or CA data unless you intend to destroy the associated state.
-
-### Docker without `sudo`
-
-The installer may add the invoking administrative user to the `docker` group. Re-login or run `newgrp docker` to activate the membership.
-
-> [!WARNING]
-> Membership in the Docker group is effectively equivalent to root-level access. Grant it only to trusted administrators.
 
 ## Backups
 
-`backup.sh` creates a compressed archive of visible files and directories from the project home directory, including `backup.sh` itself. Dotfiles and hidden directories are excluded.
+The repository includes `backup.sh`, which archives the **visible files and directories under the directory containing the script**. Hidden files and directories are excluded. By default, the archive is written to `/tmp/pnf-backups/`.
 
 ```bash
-sudo ~/backup.sh
+sudo bash ./backup.sh
 ```
 
-By default, the archive is written under `/tmp/pnf-backups/`. **Copy it off the VM before reverting a snapshot**: `/tmp` is not a durable external backup location. Also consider whether excluding hidden files is appropriate for your disaster-recovery needs.
+**Important:** `/tmp` is not an off-host backup location. Copy the archive outside the VM before reverting snapshots or reinstalling. Check that the archive contains everything needed for recovery, especially any hidden configuration or externally stored data.
 
-## Status and limitations
+## Project status and limitations
 
-- **Release stage:** Alpha.
-- **Target OS:** Ubuntu Server 26.04.
-- **Load balancer:** IPVS-only, TCP and UDP.
-- **Installation:** interactive Web CA setup is required for a fresh deployment.
-- **Security:** firewall rules, UI access, Docker permissions, and secret storage require administrator review.
-- **Validation:** successful installation and VPN functionality depend on the host kernel, network configuration, and OpenWrt image.
+- **Development stage:** Alpha.
+- **Platforms:** Debian 13 and Ubuntu Server 26.04 on amd64, subject to host kernel and package availability.
+- **Deployment:** Interactive Web CA initialization is required for a fresh installation.
+- **Networking:** IPVS-only load balancing for TCP and UDP; dual-stack operation depends on the host and upstream network.
+- **Security:** Host firewall rules, UI exposure, privileged containers and secret storage require administrator review.
+- **Validation:** A successful build is not a substitute for end-to-end client connection, DNS, routing, IPv4 and IPv6 tests.
 
 ## Contributing
 
-Issues, reproducible bug reports, and improvements are welcome. When reporting an installer problem, include the relevant log excerpt, Ubuntu version, kernel version, and affected module. **Redact credentials, private keys, and public IP information you do not wish to share.**
+Issues, reproducible bug reports, documentation improvements and pull requests are welcome. Please include the operating system, kernel version, steps to reproduce and relevant logs. **Redact private keys, credentials and other sensitive data.**
+
+## License
+
+PNF is distributed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See [`LICENSE`](LICENSE).
