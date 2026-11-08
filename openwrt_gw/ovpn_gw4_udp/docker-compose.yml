@@ -9,6 +9,13 @@ services:
 
     restart: unless-stopped
 
+    healthcheck:
+      test: ["CMD", "/bin/sh", "/etc/scripts/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
     privileged: true
   
     cap_add:
