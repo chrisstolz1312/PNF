@@ -1,0 +1,6 @@
+#!/bin/sh
+
+/etc/init.d/dnsmasq-unjail enable
+/etc/init.d/dnsmasq-unjail start
+
+exit 0

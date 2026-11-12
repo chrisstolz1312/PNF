@@ -1,0 +1,18 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+start() {
+    local script="/etc/init.d/dnsmasq"
+
+    [ -f "$script" ] || return 1
+
+    if grep -q '^[[:space:]]*procd_add_jail dnsmasq ubus log' "$script"; then
+        sed -i \
+            's/^[[:space:]]*procd_add_jail dnsmasq ubus log/# procd_add_jail dnsmasq ubus log/' \
+            "$script" || return 1
+
+        logger -t dnsmasq-unjail "Disabled dnsmasq ujail"
+        /etc/init.d/dnsmasq restart
+    fi
+}
