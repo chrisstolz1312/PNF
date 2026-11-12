@@ -134,58 +134,43 @@ uci set firewall.vpn_wan.dest='wan'
 
 
 #
-# Force DNS to upstream resolvers
+# Block VPN access to infrastructure (IPv4)
 #
 
-# IPv4 DNS -> 172.31.255.254:53
-uci set firewall.dns4_udp='redirect'
-uci set firewall.dns4_udp.name='Force DNS IPv4 UDP'
-uci set firewall.dns4_udp.src='lan'
-uci set firewall.dns4_udp.src_dport='53'
-uci set firewall.dns4_udp.proto='udp'
-uci set firewall.dns4_udp.target='DNAT'
-uci set firewall.dns4_udp.dest_ip='172.31.255.254'
-uci set firewall.dns4_udp.dest_port='53'
-
-uci set firewall.dns4_tcp='redirect'
-uci set firewall.dns4_tcp.name='Force DNS IPv4 TCP'
-uci set firewall.dns4_tcp.src='lan'
-uci set firewall.dns4_tcp.src_dport='53'
-uci set firewall.dns4_tcp.proto='tcp'
-uci set firewall.dns4_tcp.target='DNAT'
-uci set firewall.dns4_tcp.dest_ip='172.31.255.254'
-uci set firewall.dns4_tcp.dest_port='53'
+uci set firewall.block_vpn_infra4='rule'
+uci set firewall.block_vpn_infra4.name='Block-VPN-Infrastructure-IPv4'
+uci set firewall.block_vpn_infra4.src='lan'
+uci set firewall.block_vpn_infra4.dest='wan'
+uci set firewall.block_vpn_infra4.dest_ip='172.31.255.0/24'
+uci set firewall.block_vpn_infra4.proto='all'
+uci set firewall.block_vpn_infra4.family='ipv4'
+uci set firewall.block_vpn_infra4.target='REJECT'
 
 
-# IPv6 DNS -> fdff:ffff:dc59:1312:ffff:ffff:ffff:ffff:53
-uci set firewall.dns6_udp='redirect'
-uci set firewall.dns6_udp.name='Force DNS IPv6 UDP'
-uci set firewall.dns6_udp.src='lan'
-uci set firewall.dns6_udp.src_dport='53'
-uci set firewall.dns6_udp.proto='udp'
-uci set firewall.dns6_udp.family='ipv6'
-uci set firewall.dns6_udp.target='DNAT'
-uci set firewall.dns6_udp.dest_ip='fdff:ffff:dc59:1312::254'
-uci set firewall.dns6_udp.dest_port='53'
+#
+# Block VPN access to infrastructure (IPv6)
+#
 
-uci set firewall.dns6_tcp='redirect'
-uci set firewall.dns6_tcp.name='Force DNS IPv6 TCP'
-uci set firewall.dns6_tcp.src='lan'
-uci set firewall.dns6_tcp.src_dport='53'
-uci set firewall.dns6_tcp.proto='tcp'
-uci set firewall.dns6_tcp.family='ipv6'
-uci set firewall.dns6_tcp.target='DNAT'
-uci set firewall.dns6_tcp.dest_ip='fdff:ffff:dc59:1312::254'
-uci set firewall.dns6_tcp.dest_port='53'
+uci set firewall.block_vpn_infra6='rule'
+uci set firewall.block_vpn_infra6.name='Block-VPN-Infrastructure-IPv6'
+uci set firewall.block_vpn_infra6.src='lan'
+uci set firewall.block_vpn_infra6.dest='wan'
+uci set firewall.block_vpn_infra6.dest_ip='fdff:ffff:dc59:1312::/64'
+uci set firewall.block_vpn_infra6.proto='all'
+uci set firewall.block_vpn_infra6.family='ipv6'
+uci set firewall.block_vpn_infra6.target='REJECT'
 
-# Allow TCP port 7000 from LAN to the OpenWrt router
-uci set firewall.allow_tcp_7000='rule'
-uci set firewall.allow_tcp_7000.name='Allow-TCP-7000-SYN-PAYLOAD'
-uci set firewall.allow_tcp_7000.src='lan'
-uci set firewall.allow_tcp_7000.proto='tcp'
-uci set firewall.allow_tcp_7000.dest_port='7000'
-uci set firewall.allow_tcp_7000.target='ACCEPT'
-uci set firewall.allow_tcp_7000.enabled='1'
+#
+# Allow DNS from VPN to dnsmasq (IPv4 + IPv6)
+#
+
+uci set firewall.allow_dns_vpn='rule'
+uci set firewall.allow_dns_vpn.name='Allow-DNS-VPN'
+uci set firewall.allow_dns_vpn.src='lan'
+uci set firewall.allow_dns_vpn.proto='tcp udp'
+uci set firewall.allow_dns_vpn.dest_port='53'
+uci set firewall.allow_dns_vpn.family='any'
+uci set firewall.allow_dns_vpn.target='ACCEPT'
 
 #
 # Save

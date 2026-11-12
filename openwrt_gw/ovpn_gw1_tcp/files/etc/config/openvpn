@@ -27,7 +27,7 @@ config openvpn 'tun_worker_tcp'
         list push 'rcvbuf 524288'
         list push 'redirect-gateway def1 ipv6'
         list push 'route-ipv6 ::/0'
-        list push 'dhcp-option DNS 172.31.254.1'
+        list push 'dhcp-option DNS 172.31.255.1'
         list push 'dhcp-option DNS fdff:dc59:0000:0000::1'
 
 config openvpn 'tun_worker_tcp6'
