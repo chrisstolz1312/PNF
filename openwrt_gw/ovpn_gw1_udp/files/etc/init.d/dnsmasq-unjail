@@ -4,15 +4,37 @@ START=99
 
 start() {
     local script="/etc/init.d/dnsmasq"
+    local i=0
 
     [ -f "$script" ] || return 1
 
+    # Disable ujail
     if grep -q '^[[:space:]]*procd_add_jail dnsmasq ubus log' "$script"; then
         sed -i \
             's/^[[:space:]]*procd_add_jail dnsmasq ubus log/# procd_add_jail dnsmasq ubus log/' \
             "$script" || return 1
 
         logger -t dnsmasq-unjail "Disabled dnsmasq ujail"
-        /etc/init.d/dnsmasq restart
     fi
+
+    # Wait until both OpenVPN tunnels have their IPv4 addresses
+    while [ "$i" -lt 60 ]; do
+        if ip -4 addr show dev tun0 2>/dev/null | grep -Fq '172.31.254.1/25' &&
+           ip -4 addr show dev tun1 2>/dev/null | grep -Fq '172.31.254.129/25'; then
+
+            logger -t dnsmasq-unjail "VPN tunnels ready"
+            break
+        fi
+
+        sleep 1
+        i=$((i + 1))
+    done
+
+    if [ "$i" -ge 60 ]; then
+        logger -t dnsmasq-unjail "Timeout waiting for VPN tunnels"
+    fi
+
+    # Restart dnsmasq after tunnel initialization
+    logger -t dnsmasq-unjail "Restarting dnsmasq"
+    /etc/init.d/dnsmasq restart
 }
