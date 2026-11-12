@@ -5,6 +5,7 @@ config system
         option ttylogin '1'
         option log_size '512'
         option urandom_seed '0'
+        option cronloglevel '9'
 
 config timeserver 'ntp'
         option enabled '1'

@@ -1,10 +1,11 @@
 
 config system
-        option hostname 'OpenWrt_OVPN_GW_UDP2'
+        option hostname 'OpenWrt_OVPN_GW_TCP1'
         option timezone 'Europe/Berlin'
         option ttylogin '1'
         option log_size '512'
         option urandom_seed '0'
+        option cronloglevel '9'
 
 config timeserver 'ntp'
         option enabled '1'
