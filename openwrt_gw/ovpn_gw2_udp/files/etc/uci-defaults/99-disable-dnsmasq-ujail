@@ -1,0 +1,5 @@
+#!/bin/sh
+
+sed -i '/procd_add_jail dnsmasq ubus log/s/^/#/' /etc/init.d/dnsmasq
+
+exit 0
