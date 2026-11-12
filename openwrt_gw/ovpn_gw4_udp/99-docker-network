@@ -173,6 +173,17 @@ uci set firewall.allow_dns_vpn.family='any'
 uci set firewall.allow_dns_vpn.target='ACCEPT'
 
 #
+# Allow HTTP healthcheck on TCP port 7000 (uhttpd)
+#
+
+uci set firewall.allow_tcp_7000='rule'
+uci set firewall.allow_tcp_7000.name='Allow-uHTTPd-Healthcheck'
+uci set firewall.allow_tcp_7000.src='wan'
+uci set firewall.allow_tcp_7000.proto='tcp'
+uci set firewall.allow_tcp_7000.dest_port='7000'
+uci set firewall.allow_tcp_7000.target='ACCEPT'
+
+#
 # Save
 #
 
