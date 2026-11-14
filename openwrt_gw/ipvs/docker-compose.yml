@@ -2,10 +2,27 @@ services:
   ipvs:
     build: .
     container_name: ipvs
-    network_mode: host
-    privileged: true
+
     restart: unless-stopped
+
+    privileged: true
+
+    ports:
+      - "1194:1194/tcp"
+      - "1194:1194/udp"
+
     environment:
       IGNORE_TCP: "${IGNORE_TCP:-0}"
+
     volumes:
       - ./backends.conf:/backends.conf:ro
+
+    networks:
+      openwrt_openvpn:
+        ipv4_address: 172.31.255.2
+        ipv6_address: fdff:ffff:dc59:1312::2
+
+networks:
+  openwrt_openvpn:
+    external: true
+    name: openwrt_openvpn
