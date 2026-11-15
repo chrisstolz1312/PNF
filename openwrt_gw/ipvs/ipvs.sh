@@ -23,12 +23,57 @@ if [ "$IGNORE_TCP" = 0 ]; then
 fi
 
 # Gleiche Adresserkennung fuer Setup und Check.
+# WAN-Interface automatisch erkennen
 WAN_IF="$(ip -4 route show default | awk '/^default / {for(i=1;i<=NF;i++) if($i=="dev") {print $(i+1); exit}}')"
 [ -n "$WAN_IF" ] || fail 'Kein IPv4-Default-Interface gefunden'
-WAN4_IP="$(ip -4 -o addr show dev "$WAN_IF" scope global | awk 'NR==1 {split($4,a,"/"); print a[1]}')"
-WAN6_IP="$(ip -6 -o addr show dev "$WAN_IF" scope global | awk '!/temporary|deprecated|tentative|dadfailed/ {split($4,a,"/"); print a[1]; exit}')"
-[ -n "$WAN4_IP" ] || fail "Keine globale IPv4 auf $WAN_IF"
-[ -n "$WAN6_IP" ] || fail "Keine globale IPv6 auf $WAN_IF"
+
+# Konfiguration einlesen
+IPVS_IPV4=""
+IPVS_IPV6=""
+
+if [ -r /ipvs.conf ]; then
+    . /ipvs.conf
+fi
+
+# IPv4: statisch bevorzugen, sonst automatisch ermitteln
+if [ -n "$IPVS_IPV4" ]; then
+    if ip -4 -o addr show | awk '{split($4,a,"/"); print a[1]}' | grep -Fxq "$IPVS_IPV4"; then
+        WAN4_IP="$IPVS_IPV4"
+        log "IPv4 statisch: $WAN4_IP"
+    else
+        log "WARNUNG: Statische IPv4 $IPVS_IPV4 nicht am Host vorhanden"
+        WAN4_IP=""
+    fi
+else
+    WAN4_IP=""
+fi
+
+if [ -z "$WAN4_IP" ]; then
+    WAN4_IP="$(ip -4 -o addr show dev "$WAN_IF" scope global | awk 'NR==1 {split($4,a,"/"); print a[1]}')"
+    log "IPv4 automatisch: $WAN4_IP"
+fi
+
+# IPv6: statisch bevorzugen, sonst automatisch ermitteln
+if [ -n "$IPVS_IPV6" ]; then
+    if ip -6 -o addr show | awk '{split($4,a,"/"); print a[1]}' | grep -Fxq "$IPVS_IPV6"; then
+        WAN6_IP="$IPVS_IPV6"
+        log "IPv6 statisch: $WAN6_IP"
+    else
+        log "WARNUNG: Statische IPv6 $IPVS_IPV6 nicht am Host vorhanden"
+        WAN6_IP=""
+    fi
+else
+    WAN6_IP=""
+fi
+
+if [ -z "$WAN6_IP" ]; then
+    WAN6_IP="$(ip -6 -o addr show dev "$WAN_IF" scope global |
+        awk '!/temporary|deprecated|tentative|dadfailed/ {split($4,a,"/"); print a[1]; exit}')"
+    log "IPv6 automatisch: $WAN6_IP"
+fi
+
+[ -n "$WAN4_IP" ] || fail "Keine IPv4-Adresse verfügbar"
+[ -n "$WAN6_IP" ] || fail "Keine IPv6-Adresse verfügbar"
 
 # Ein IPVS-Service oder Backend wird anhand der ipvsadm-Save-Ausgabe geprueft.
 # grep -F sucht die genauen Argumentteile, ohne IPv6 als Regex zu interpretieren.

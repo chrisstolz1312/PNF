@@ -9,3 +9,4 @@ services:
       IGNORE_TCP: "${IGNORE_TCP:-0}"
     volumes:
       - ./backends.conf:/backends.conf:ro
+      - ./ipvs.conf:/ipvs.conf:ro
