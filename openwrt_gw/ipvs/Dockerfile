@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y \
         ipvsadm \
+        iputils-ping \
         iproute2 \
         procps && \
     rm -rf /var/lib/apt/lists/*
