@@ -12,7 +12,8 @@ RUN apt-get update && \
 
 COPY ipvs.sh /ipvs.sh
 COPY watchdog.sh /watchdog.sh
+COPY healthcheck.sh /healthcheck.sh
 
-RUN chmod +x /ipvs.sh /watchdog.sh
+RUN chmod +x /ipvs.sh /watchdog.sh /healthcheck.sh
 
 CMD ["/watchdog.sh"]
