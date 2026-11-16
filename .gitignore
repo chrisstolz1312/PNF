@@ -5,3 +5,5 @@
 
 # Local OpenWrt password hashes (never commit)
 /config/secrets/
+
+/openwrt_gw/unbound_pihole/.env

@@ -162,10 +162,72 @@ done
 # Unbound
 ###############################################################################
 
-headline "Starte Unbound"
+###############################################################################
+# Pi-hole-Passwort
+###############################################################################
+
+headline "Pi-hole Einrichtung"
+
+DNS_DIR="$ROOT/unbound_pihole"
+ENV_FILE="$DNS_DIR/.env"
+
+DEFAULT_PASSWORD="changeme_123"
+
+if [[ ! -f "$ENV_FILE" ]]; then
+    umask 077
+    printf 'PIHOLE_PASSWORD=%s\n' "$DEFAULT_PASSWORD" > "$ENV_FILE"
+fi
+
+chmod 600 "$ENV_FILE"
+
+echo "Pi-hole Webinterface: http://172.31.255.254/admin/"
+echo
+
+if [[ -t 0 ]]; then
+    read -r -p "Pi-hole-Passwort ändern? [J/n]: " CHANGE_PASSWORD
+
+    if [[ ! "$CHANGE_PASSWORD" =~ ^[Nn]$ ]]; then
+        while true; do
+            read -r -s -p "Neues Passwort: " PASSWORD1
+            echo
+            read -r -s -p "Passwort wiederholen: " PASSWORD2
+            echo
+
+            if [[ -z "$PASSWORD1" ]]; then
+                echo "Das Passwort darf nicht leer sein."
+            elif [[ "$PASSWORD1" != "$PASSWORD2" ]]; then
+                echo "Die Passwörter stimmen nicht überein."
+            elif [[ "$PASSWORD1" == *$'\n'* || "$PASSWORD1" == *$'\r'* ]]; then
+                echo "Ungültiges Passwort."
+            else
+                break
+            fi
+        done
+
+        # Sicheres Schreiben als Docker-Compose-ENV-Wert.
+        # JSON-Strings werden von Compose als doppelt zitierte Werte akzeptiert.
+        ESCAPED_PASSWORD=$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$PASSWORD1")
+
+        printf 'PIHOLE_PASSWORD=%s\n' "$ESCAPED_PASSWORD" > "$ENV_FILE"
+        chmod 600 "$ENV_FILE"
+
+        unset PASSWORD1 PASSWORD2 ESCAPED_PASSWORD
+
+        echo "Pi-hole-Passwort gespeichert."
+    fi
+else
+    echo "Keine interaktive Konsole: vorhandenes Passwort wird verwendet."
+fi
+
+###############################################################################
+# Unbound + Pi-hole
+###############################################################################
+
+headline "Starte Unbound und Pi-hole"
 
 (
-    cd "$ROOT/unbound"
+    cd "$DNS_DIR"
+    docker compose config --quiet
     docker compose up -d
 )
 

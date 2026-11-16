@@ -43,7 +43,7 @@ headline "Stoppe IPVS"
 headline "Stoppe Unbound"
 
 (
-    cd "./unbound"
+    cd "./unbound_pihole"
     docker compose down
 )
 
